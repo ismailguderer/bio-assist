@@ -21,12 +21,12 @@ export default function SerialDilution() {
         <Field label="Stock conc."><input className="input" type="number" value={stockConc} onChange={e => setStockConc(e.target.value)} /></Field>
         <Field label="Dilution factor"><input className="input" type="number" value={factor} onChange={e => setFactor(e.target.value)} /></Field>
         <Field label="# Steps"><input className="input" type="number" value={steps} onChange={e => setSteps(e.target.value)} /></Field>
-        <Field label="Total vol/tube (µL)"><input className="input" type="number" value={totalVol} onChange={e => setTotalVol(e.target.value)} /></Field>
+        <Field label="Total vol/tube (μL)"><input className="input" type="number" value={totalVol} onChange={e => setTotalVol(e.target.value)} /></Field>
       </div>
       {rows.length > 0 && (
         <div style={{ marginTop: 16, overflowX: 'auto' }}>
           <table className="table">
-            <thead><tr><th>Tube</th><th>Conc.</th><th>Transfer (µL)</th><th>Diluent (µL)</th></tr></thead>
+            <thead><tr><th>Tube</th><th>Conc.</th><th>Transfer (μL)</th><th>Diluent (μL)</th></tr></thead>
             <tbody>{rows.map(r => (
               <tr key={r.step}><td>{r.step}</td><td>{fmt(r.conc)}</td><td>{fmt(r.transferVol)}</td><td>{fmt(r.diluentVol)}</td></tr>
             ))}</tbody>

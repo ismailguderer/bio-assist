@@ -9,12 +9,13 @@ export default function Centrifuge() {
 
   const r = parseFloat(radius)
   const calc = () => {
+    if (isNaN(r) || r <= 0) return null
     if (mode === 'rpm2rcf') {
       const rp = parseFloat(rpm)
-      return !isNaN(rp) && !isNaN(r) ? { rcf: 1.118e-5 * r * rp * rp, rpm: rp } : null
+      return !isNaN(rp) && rp >= 0 ? { rcf: 1.118e-5 * r * rp * rp, rpm: rp } : null
     }
     const rc = parseFloat(rcf)
-    return !isNaN(rc) && !isNaN(r) ? { rpm: Math.sqrt(rc / (1.118e-5 * r)), rcf: rc } : null
+    return !isNaN(rc) && rc >= 0 ? { rpm: Math.sqrt(rc / (1.118e-5 * r)), rcf: rc } : null
   }
   const res = calc()
 

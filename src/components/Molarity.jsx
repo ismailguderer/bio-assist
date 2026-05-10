@@ -6,7 +6,7 @@ export default function Molarity() {
   const [mw, setMw] = useState('')
   const [vol, setVol] = useState('')
   const [volUnit, setVolUnit] = useState('mL')
-  const volFactor = { 'µL': 1e-6, mL: 1e-3, L: 1 }
+  const volFactor = { 'μL': 1e-6, mL: 1e-3, L: 1 }
 
   const m = parseFloat(mass), w = parseFloat(mw), v = parseFloat(vol) * volFactor[volUnit]
   const r = !isNaN(m) && !isNaN(w) && !isNaN(v) && v > 0 && w > 0 ? (m / 1000 / w) / v : null
@@ -23,7 +23,7 @@ export default function Molarity() {
         <div style={{ display: 'flex', gap: 8 }}>
           <input className="input" style={{ flex: 1 }} type="number" value={vol} onChange={e => setVol(e.target.value)} placeholder="e.g. 10" />
           <select className="select" style={{ width: 80 }} value={volUnit} onChange={e => setVolUnit(e.target.value)}>
-            <option>µL</option><option>mL</option><option>L</option>
+            <option>μL</option><option>mL</option><option>L</option>
           </select>
         </div>
       </Field>
@@ -31,7 +31,7 @@ export default function Molarity() {
         <div className="result-box">
           <div className="result-label">CONCENTRATION</div>
           <div className="result-value">{fmt(r)} M</div>
-          <div className="result-sub">= {fmt(r * 1e3)} mM | {fmt(r * 1e6)} µM | {fmt(r * 1e9)} nM</div>
+          <div className="result-sub">= {fmt(r * 1e3)} mM | {fmt(r * 1e6)} μM | {fmt(r * 1e9)} nM</div>
         </div>
       )}
     </div>

@@ -1,28 +1,48 @@
-# BIO-ASSIST
+# 🧫 BIO-ASSIST — Wet Lab Toolkit
 
-Browser-based calculator toolkit for common wet lab calculations. No backend, no login, everything runs client-side.
+<p>
+  <a href="https://ismailguderer.github.io/bio-assist/">
+    <strong>🔗 Try the live app</strong>
+  </a>
+</p>
+
+A lightweight, client-side calculator suite for everyday wet lab work. Runs entirely in the browser.
 
 ## Tools
 
-| Module | What it does |
+| Module | Description |
 |---|---|
-| Molarity | mass to concentration (M, mM, uM, nM) |
-| Dilution | C1V1 = C2V2 solver |
-| Serial Dilution | multi-step dilution planner with pipetting volumes |
-| Unit Converter | ug/mL to nM, bp to kDa, OD600 to cells/mL |
-| PCR Mix | master mix calculator with overage % |
-| RPM / RCF | centrifuge g-force conversion |
-| Buffers | common buffer recipes (PBS, TAE, TBE, TE, LB, TBS) |
+| Molarity | Mass → concentration (M, mM, µM, nM) |
+| Dilution | C₁V₁ = C₂V₂ solver |
+| Serial Dilution | Multi-step dilution planner with pipetting table |
+| Unit Converter | µg/mL ↔ nM, bp → kDa, OD₆₀₀ → cells/mL |
+| PCR Mix | Master mix calculator with extra % |
+| RPM ↔ RCF | Centrifuge g-force conversion |
+| Buffers | Common buffer recipes (PBS, TAE, TBE, TE, LB, TBS) |
 
-## Setup
+## Quick Start
 
 ```bash
 npm install
 npm run dev
 ```
 
-Deployment is handled via GitHub Actions on push to `main`. See `.github/workflows/deploy.yml`.
+## Deploy to GitHub Pages
 
-## Stack
+```bash
+# 1. Create a GitHub repo named "bio-assist"
+# 2. Push this code to it
+# 3. Deploy:
+npm run deploy
+```
 
-React 18, Vite 5. No additional runtime dependencies.
+Your app will be live at `https://<your-username>.github.io/bio-assist/`
+
+> **Note:** If your repo name differs from `bio-assist`, update the `base` field in `vite.config.js` accordingly.
+
+## Tech Stack
+
+- React 18
+- Vite 5
+- gh-pages (deployment)
+- Zero runtime dependencies beyond React
