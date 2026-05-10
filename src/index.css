@@ -1,0 +1,230 @@
+/* ── Reset ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Fonts ── */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+/* ── Theme: Dark (default) ── */
+:root {
+  --bg-primary: #1a1d23;
+  --bg-secondary: #22262e;
+  --bg-tertiary: #2a2f38;
+  --bg-input: #1e2128;
+  --bg-result: linear-gradient(135deg, #1e3a5f 0%, #1a1d23 100%);
+
+  --border-primary: #2e3440;
+  --border-accent: #3b82f6;
+
+  --text-primary: #e8eaed;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --accent-muted: #1e3a5f;
+  --accent-text: #93c5fd;
+
+  --tab-active-bg: #3b82f6;
+  --tab-active-text: #ffffff;
+  --tab-inactive-text: #9ca3af;
+
+  --table-header-border: #3b82f6;
+  --table-row-border: #2a2f38;
+
+  --result-label: #60a5fa;
+  --result-value: #e8eaed;
+
+  --font-body: 'IBM Plex Sans', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+
+  color-scheme: dark;
+}
+
+/* ── Theme: Light ── */
+[data-theme="light"] {
+  --bg-primary: #f8f9fb;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f1f3f5;
+  --bg-input: #ffffff;
+  --bg-result: linear-gradient(135deg, #dbeafe 0%, #f8f9fb 100%);
+
+  --border-primary: #d1d5db;
+  --border-accent: #3b82f6;
+
+  --text-primary: #1f2937;
+  --text-secondary: #4b5563;
+  --text-muted: #9ca3af;
+
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-muted: #dbeafe;
+  --accent-text: #1e40af;
+
+  --tab-active-bg: #2563eb;
+  --tab-active-text: #ffffff;
+  --tab-inactive-text: #6b7280;
+
+  --table-header-border: #2563eb;
+  --table-row-border: #e5e7eb;
+
+  --result-label: #2563eb;
+  --result-value: #1f2937;
+
+  color-scheme: light;
+}
+
+/* ── Base ── */
+body {
+  font-family: var(--font-body);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* ── Shared: Inputs ── */
+.input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: var(--font-mono);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.input:focus {
+  border-color: var(--accent);
+}
+
+.input::placeholder {
+  color: var(--text-muted);
+}
+
+.select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: var(--font-mono);
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.select:focus {
+  border-color: var(--accent);
+}
+
+/* ── Shared: Field ── */
+.field {
+  margin-bottom: 14px;
+}
+
+.field-label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--accent-text);
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+/* ── Shared: Result Box ── */
+.result-box {
+  background: var(--bg-result);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  margin-top: 16px;
+  font-family: var(--font-mono);
+  font-size: 15px;
+  color: var(--accent-text);
+}
+
+.result-label {
+  font-size: 12px;
+  color: var(--result-label);
+  margin-bottom: 4px;
+}
+
+.result-value {
+  font-size: 22px;
+  color: var(--result-value);
+  font-weight: 700;
+}
+
+.result-sub {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.result-note {
+  font-size: 11px;
+  margin-top: 8px;
+  color: var(--text-muted);
+}
+
+/* ── Shared: Tables ── */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+}
+
+.table th {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--table-header-border);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--table-row-border);
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.table .highlight {
+  color: var(--result-value);
+  font-weight: 700;
+}
+
+.table .total {
+  font-weight: 700;
+  color: var(--accent-text);
+}
+
+/* ── Scrollbar hide for tabs ── */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  scrollbar-width: none;
+}
