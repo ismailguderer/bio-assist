@@ -61,9 +61,14 @@ export default function SerialDilution() {
             ))}</tbody>
           </table>
           <ol className="steps">
-            <li>Put <strong>{fmtVol(plan.diluent)} µL</strong> diluent in each of {v.steps} tubes.</li>
-            <li>Transfer <strong>{fmtVol(plan.transfer)} µL</strong> stock into tube 1 and mix; continue down the series.</li>
-            <li>Remove and discard {fmtVol(plan.transfer)} µL from the last tube, so every tube holds {fmtVol(plan.diluent)} µL.</li>
+            <li>Put <strong>{fmtVol(plan.diluent)} µL</strong> diluent in {v.steps > 1 ? `each of ${v.steps} tubes` : 'the tube'}.</li>
+            <li>
+              Transfer <strong>{fmtVol(plan.transfer)} µL</strong> stock into {v.steps > 1 ? 'tube 1 and mix; continue down the series' : 'the tube and mix'}.
+            </li>
+            <li>
+              {v.steps > 1 ? `Tubes 1–${v.steps - 1} end with ${fmtVol(plan.diluent)} µL; the final tube contains ` : 'The tube contains '}
+              <strong>{fmtVol(plan.diluent + plan.transfer)} µL</strong>.
+            </li>
           </ol>
           {plan.transfer < MIN_PIPETTE_UL && (
             <Msg kind="warn">The transfer volume is below {MIN_PIPETTE_UL} µL, where pipetting is inaccurate. Raise the final volume or lower the dilution factor.</Msg>

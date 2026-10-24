@@ -5,7 +5,6 @@ import Dilution from './components/Dilution'
 import SerialDilution from './components/SerialDilution'
 import UnitConverter from './components/UnitConverter'
 import PCRMix from './components/PCRMix'
-import Centrifuge from './components/Centrifuge'
 import BufferRecipes from './components/BufferRecipes'
 
 const TABS = [
@@ -14,7 +13,6 @@ const TABS = [
   { id: 'serial', label: 'Serial Dilution', icon: '🔬', Panel: SerialDilution },
   { id: 'units', label: 'Unit Converter', icon: '🔄', Panel: UnitConverter },
   { id: 'pcr', label: 'PCR Mix', icon: '🧬', Panel: PCRMix },
-  { id: 'centrifuge', label: 'RPM ↔ RCF', icon: '⚙️', Panel: Centrifuge },
   { id: 'buffer', label: 'Buffers', icon: '🧪', Panel: BufferRecipes },
 ]
 

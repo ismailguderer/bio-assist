@@ -1,4 +1,4 @@
-import { NumField, SelectField, Msg, Toolbar, ClearButton, usePersist, parseNum, readInputs, fmt } from '../shared'
+import { NumField, SelectField, Msg, Toolbar, ClearButton, usePersist, parseNum, readInputs, fmt, fmtInt } from '../shared'
 import { MOLAR, MASS_CONC, toBase, fromBase, inOtherUnits } from '../units'
 
 const MOLECULES = {
@@ -9,12 +9,14 @@ const MOLECULES = {
 }
 const CELLS_PER_OD = 8e8
 const OD_LINEAR_MAX = 1
+const RCF_K = 1.118e-5 // RCF = K · r(cm) · RPM²
 
 const INITIAL = {
   mode: 'conc',
   mw: '', mass: '', massUnit: 'µg/mL', molar: '', molarUnit: 'nM',
   molecule: 'dsDNA', length: '', kda: '',
   od: '', cells: '',
+  radius: '', rpm: '', rcf: '',
 }
 
 const Hint = ({ status, message, a, b }) => {
@@ -115,10 +117,42 @@ function Cells({ s, set }) {
   )
 }
 
+function Speed({ s, set }) {
+  const r = parseNum(s.radius)
+  const speed = readInputs(s, ['rpm', 'rcf'], 1)
+  let res = null
+  if (r > 0 && speed.status === 'solve') {
+    const { rpm, rcf } = speed.values
+    res = rpm !== null
+      ? { missing: 'rcf', rpm, rcf: RCF_K * r * rpm * rpm }
+      : { missing: 'rpm', rcf, rpm: Math.sqrt(rcf / (RCF_K * r)) }
+  }
+  return (
+    <>
+      <NumField label="Rotor Radius (cm)" value={s.radius} onChange={(v) => set({ radius: v })}
+        hint="Use the maximum radius (rmax) from the rotor manual or the rotor itself." />
+      <NumField label="RPM" value={s.rpm} onChange={(v) => set({ rpm: v })}
+        placeholder={res?.missing === 'rpm' ? `= ${fmtInt(res.rpm)}` : ''} />
+      <NumField label="RCF (×g)" value={s.rcf} onChange={(v) => set({ rcf: v })}
+        placeholder={res?.missing === 'rcf' ? `= ${fmtInt(res.rcf)}` : ''} />
+      {r === null && <Msg>Enter the rotor radius first.</Msg>}
+      {r !== null && !(r > 0) && <Msg kind="error">Rotor radius must be a number greater than zero.</Msg>}
+      {r > 0 && <Hint {...speed} a="RPM" b="RCF" />}
+      {res && (
+        <div className="result-box">
+          {fmtInt(res.rpm)} RPM ⟷ {fmtInt(res.rcf)} ×g
+          <div className="result-note">RCF = 1.118 × 10⁻⁵ × r × RPM²</div>
+        </div>
+      )}
+    </>
+  )
+}
+
 const MODES = {
   conc: { label: 'Mass ↔ Molar Concentration', Panel: MassMolar, keys: ['mw', 'mass', 'molar'] },
   size: { label: 'Length ↔ Molecular Weight', Panel: Size, keys: ['length', 'kda'] },
   od: { label: 'OD₆₀₀ ↔ Cells/mL', Panel: Cells, keys: ['od', 'cells'] },
+  rcf: { label: 'RPM ↔ RCF', Panel: Speed, keys: ['radius', 'rpm', 'rcf'] },
 }
 
 export default function UnitConverter() {

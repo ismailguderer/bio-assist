@@ -15,9 +15,8 @@ A lightweight, client-side calculator suite for everyday wet lab work. Runs enti
 | Molarity | Mass, molecular weight, volume, concentration: fill any three, get the fourth |
 | Dilution | C₁V₁ = C₂V₂: fill any three, get the fourth and the diluent volume |
 | Serial Dilution | Dilution series with equal final volume per tube and a pipetting table |
-| Unit Converter | Mass ↔ molar concentration, length ↔ molecular weight (DNA, RNA, protein), OD₆₀₀ ↔ cells/mL |
+| Unit Converter | Mass ↔ molar concentration, length ↔ molecular weight (DNA, RNA, protein), OD₆₀₀ ↔ cells/mL, RPM ↔ RCF |
 | PCR Mix | Master mix for N reactions plus extra %, template added per tube |
-| RPM ↔ RCF | Centrifuge speed ↔ g-force for a given rotor radius |
 | Buffers | PBS, TAE, TBE, TE, LB, TBS, scaled to any volume and strength |
 
 Inputs accept decimal commas, carry units, and are kept in the browser between visits.
