@@ -5,9 +5,6 @@
   padding: 0;
 }
 
-/* ── Fonts ── */
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
-
 /* ── Theme: Dark (default) ── */
 :root {
   --bg-primary: #1a1d23;
@@ -37,6 +34,11 @@
 
   --result-label: #60a5fa;
   --result-value: #e8eaed;
+
+  --warn-text: #fcd34d;
+  --warn-bg: #2a2110;
+  --error-text: #fca5a5;
+  --error-bg: #1e1010;
 
   --font-body: 'IBM Plex Sans', -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
@@ -76,6 +78,11 @@
 
   --result-label: #2563eb;
   --result-value: #1f2937;
+
+  --warn-text: #92400e;
+  --warn-bg: #fffbeb;
+  --error-text: #991b1b;
+  --error-bg: #fef2f2;
 
   color-scheme: light;
 }
@@ -227,4 +234,92 @@ body {
 
 .hide-scrollbar {
   scrollbar-width: none;
+}
+
+/* ── Shared: Inputs with a unit selector ── */
+.row {
+  display: flex;
+  gap: 8px;
+}
+
+.row .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.row .unit {
+  width: 96px;
+  flex: none;
+}
+
+.field-hint {
+  font-size: 11px;
+  margin-top: 6px;
+  color: var(--text-muted);
+}
+
+/* ── Shared: Messages ── */
+.msg {
+  margin-top: 16px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  border: 1px dashed var(--border-primary);
+  color: var(--text-secondary);
+}
+
+.msg-warn {
+  border: 1px solid #d97706;
+  color: var(--warn-text);
+  background: var(--warn-bg);
+}
+
+.msg-error {
+  border: 1px solid #dc2626;
+  color: var(--error-text);
+  background: var(--error-bg);
+}
+
+/* ── Shared: Buttons ── */
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.btn {
+  padding: 6px 12px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+  font-family: var(--font-body);
+  font-weight: 500;
+}
+
+.btn:hover {
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+/* ── Shared: Step-by-step instructions ── */
+.steps {
+  margin: 12px 0 0 18px;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.steps li + li {
+  margin-top: 4px;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.nocase {
+  text-transform: none;
 }

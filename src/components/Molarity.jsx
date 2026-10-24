@@ -1,39 +1,74 @@
-import { useState } from 'react'
-import { Field, fmt } from '../shared'
+import { NumField, Msg, Toolbar, ClearButton, usePersist, readInputs, fmt } from '../shared'
+import { MASS, VOLUME, MOLAR, toBase, fromBase, inOtherUnits } from '../units'
+
+const KEYS = ['mass', 'mw', 'vol', 'conc']
+const INITIAL = { mass: '', mw: '', vol: '', conc: '', massUnit: 'mg', volUnit: 'mL', concUnit: 'mM' }
+const LABEL = { mass: 'Mass', mw: 'Molecular Weight', vol: 'Volume', conc: 'Concentration' }
+
+// base units: g, g/mol, L, mol/L; moles = mass / mw = conc * vol
+function solve(missing, v) {
+  switch (missing) {
+    case 'conc': return v.mass / v.mw / v.vol
+    case 'mass': return v.conc * v.vol * v.mw
+    case 'vol': return v.mass / v.mw / v.conc
+    case 'mw': return v.mass / (v.conc * v.vol)
+  }
+}
 
 export default function Molarity() {
-  const [mass, setMass] = useState('')
-  const [mw, setMw] = useState('')
-  const [vol, setVol] = useState('')
-  const [volUnit, setVolUnit] = useState('mL')
-  const volFactor = { 'μL': 1e-6, mL: 1e-3, L: 1 }
+  const [s, set, reset] = usePersist('molarity', INITIAL)
+  const input = readInputs(s, KEYS, 3)
 
-  const m = parseFloat(mass), w = parseFloat(mw), v = parseFloat(vol) * volFactor[volUnit]
-  const r = !isNaN(m) && !isNaN(w) && !isNaN(v) && v > 0 && w > 0 ? (m / 1000 / w) / v : null
+  let result = null
+  if (input.status === 'solve') {
+    const [missing] = input.missing
+    const v = input.values
+    const base = solve(missing, {
+      mass: v.mass === null ? null : toBase(v.mass, MASS, s.massUnit),
+      mw: v.mw,
+      vol: v.vol === null ? null : toBase(v.vol, VOLUME, s.volUnit),
+      conc: v.conc === null ? null : toBase(v.conc, MOLAR, s.concUnit),
+    })
+    const shown = {
+      mass: { table: MASS, unit: s.massUnit },
+      vol: { table: VOLUME, unit: s.volUnit },
+      conc: { table: MOLAR, unit: s.concUnit },
+      mw: { table: null, unit: 'g/mol' },
+    }[missing]
+    result = {
+      missing,
+      value: shown.table ? fromBase(base, shown.table, shown.unit) : base,
+      unit: shown.unit,
+      others: shown.table ? inOtherUnits(base, shown.table, shown.unit) : [],
+    }
+  }
+
+  const placeholder = (k) => (result?.missing === k ? `= ${fmt(result.value)}` : '')
 
   return (
     <div>
-      <Field label="Mass (mg)">
-        <input className="input" type="number" value={mass} onChange={e => setMass(e.target.value)} placeholder="e.g. 100" />
-      </Field>
-      <Field label="Molecular Weight (g/mol)">
-        <input className="input" type="number" value={mw} onChange={e => setMw(e.target.value)} placeholder="e.g. 342.3" />
-      </Field>
-      <Field label="Volume">
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input className="input" style={{ flex: 1 }} type="number" value={vol} onChange={e => setVol(e.target.value)} placeholder="e.g. 10" />
-          <select className="select" style={{ width: 80 }} value={volUnit} onChange={e => setVolUnit(e.target.value)}>
-            <option>μL</option><option>mL</option><option>L</option>
-          </select>
-        </div>
-      </Field>
-      {r !== null && (
+      <NumField label="Mass" value={s.mass} onChange={(mass) => set({ mass })}
+        units={Object.keys(MASS)} unit={s.massUnit} onUnit={(massUnit) => set({ massUnit })} placeholder={placeholder('mass')} />
+      <NumField label="Molecular Weight (g/mol)" value={s.mw} onChange={(mw) => set({ mw })} placeholder={placeholder('mw')} />
+      <NumField label="Volume" value={s.vol} onChange={(vol) => set({ vol })}
+        units={Object.keys(VOLUME)} unit={s.volUnit} onUnit={(volUnit) => set({ volUnit })} placeholder={placeholder('vol')} />
+      <NumField label="Concentration" value={s.conc} onChange={(conc) => set({ conc })}
+        units={Object.keys(MOLAR)} unit={s.concUnit} onUnit={(concUnit) => set({ concUnit })} placeholder={placeholder('conc')} />
+
+      {input.status === 'hint' && <Msg>Fill in any three fields; the fourth is calculated.</Msg>}
+      {input.status === 'full' && <Msg>All four fields are filled. Clear the one you want to calculate.</Msg>}
+      {input.status === 'error' && <Msg kind="error">{input.message}</Msg>}
+      {result && (
         <div className="result-box">
-          <div className="result-label">CONCENTRATION</div>
-          <div className="result-value">{fmt(r)} M</div>
-          <div className="result-sub">= {fmt(r * 1e3)} mM | {fmt(r * 1e6)} μM | {fmt(r * 1e9)} nM</div>
+          <div className="result-label">{LABEL[result.missing].toUpperCase()}</div>
+          <div className="result-value">{fmt(result.value)} {result.unit}</div>
+          {result.others.length > 0 && (
+            <div className="result-sub">= {result.others.map((o) => `${fmt(o.value)} ${o.unit}`).join(' | ')}</div>
+          )}
+          <div className="result-note">moles = mass ÷ MW = concentration × volume</div>
         </div>
       )}
+      <Toolbar><ClearButton onClick={reset} /></Toolbar>
     </div>
   )
 }

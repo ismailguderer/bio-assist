@@ -4,6 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BIO-ASSIST — Wet Lab Toolkit</title>
+    <script>
+      try {
+        const t = localStorage.getItem('ba-theme')
+        const light = t === 'light' || (t !== 'dark' && matchMedia('(prefers-color-scheme: light)').matches)
+        document.documentElement.setAttribute('data-theme', light ? 'light' : 'dark')
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

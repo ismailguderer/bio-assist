@@ -1,38 +1,77 @@
-import { useState } from 'react'
-import { Field, fmt } from '../shared'
+import { Units, NumField, Msg, Toolbar, CopyButton, ClearButton, usePersist, parseNum, fmt, fmtVol, tsv, MIN_PIPETTE_UL } from '../shared'
+
+const CONC_UNITS = ['M', 'mM', 'µM', 'nM', 'mg/mL', 'µg/mL', 'ng/µL', 'cells/mL', '%']
+const INITIAL = { stock: '100', stockUnit: 'µM', factor: '10', steps: '5', volume: '100' }
+const MAX_STEPS = 30
+
+function check(s) {
+  const v = { stock: parseNum(s.stock), factor: parseNum(s.factor), steps: parseNum(s.steps), volume: parseNum(s.volume) }
+  if (Object.values(v).some((x) => x === null)) return { error: 'Fill in all fields.' }
+  if (Object.values(v).some((x) => Number.isNaN(x))) return { error: 'Enter numbers only.' }
+  if (v.stock <= 0 || v.volume <= 0) return { error: 'Stock concentration and volume must be greater than zero.' }
+  if (v.factor <= 1) return { error: 'Dilution factor must be greater than 1.' }
+  if (!Number.isInteger(v.steps) || v.steps < 1 || v.steps > MAX_STEPS) return { error: `Number of steps must be a whole number from 1 to ${MAX_STEPS}.` }
+  return { v }
+}
 
 export default function SerialDilution() {
-  const [stockConc, setStockConc] = useState('100')
-  const [factor, setFactor] = useState('10')
-  const [steps, setSteps] = useState('5')
-  const [totalVol, setTotalVol] = useState('100')
+  const [s, set, reset] = usePersist('serial', INITIAL)
+  const { v, error } = check(s)
 
-  const f = parseFloat(factor), s = parseInt(steps), sc = parseFloat(stockConc), tv = parseFloat(totalVol)
-  const rows = []
-  if (!isNaN(f) && !isNaN(s) && !isNaN(sc) && !isNaN(tv) && f > 1 && s > 0) {
-    for (let i = 0; i < s; i++) {
-      rows.push({ step: i + 1, conc: sc / Math.pow(f, i + 1), transferVol: tv / f, diluentVol: tv - tv / f })
-    }
+  let plan = null
+  if (v) {
+    // diluent D and transfer T with T / (T + D) = 1 / factor; every tube keeps D after passing T on
+    const diluent = v.volume
+    const transfer = v.volume / (v.factor - 1)
+    const tubes = Array.from({ length: v.steps }, (_, i) => ({
+      tube: i + 1,
+      conc: v.stock / v.factor ** (i + 1),
+      from: i === 0 ? 'stock' : `tube ${i}`,
+    }))
+    plan = { diluent, transfer, tubes }
   }
+
+  const text = plan && tsv([
+    ['Tube', `Conc. (${s.stockUnit})`, 'Diluent (µL)', 'Transfer (µL)', 'From'],
+    ...plan.tubes.map((t) => [t.tube, fmt(t.conc), fmtVol(plan.diluent), fmtVol(plan.transfer), t.from]),
+  ])
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        <Field label="Stock conc."><input className="input" type="number" value={stockConc} onChange={e => setStockConc(e.target.value)} /></Field>
-        <Field label="Dilution factor"><input className="input" type="number" value={factor} onChange={e => setFactor(e.target.value)} /></Field>
-        <Field label="# Steps"><input className="input" type="number" value={steps} onChange={e => setSteps(e.target.value)} /></Field>
-        <Field label="Total vol/tube (μL)"><input className="input" type="number" value={totalVol} onChange={e => setTotalVol(e.target.value)} /></Field>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
+        <NumField label="Stock Conc." value={s.stock} onChange={(stock) => set({ stock })}
+          units={CONC_UNITS} unit={s.stockUnit} onUnit={(stockUnit) => set({ stockUnit })} />
+        <NumField label="Dilution Factor" value={s.factor} onChange={(factor) => set({ factor })} />
+        <NumField label="# Steps" value={s.steps} onChange={(steps) => set({ steps })} />
+        <NumField label="Final Vol per Tube (µL)" value={s.volume} onChange={(volume) => set({ volume })} />
       </div>
-      {rows.length > 0 && (
+
+      {error && <Msg kind="error">{error}</Msg>}
+      {plan && (
         <div style={{ marginTop: 16, overflowX: 'auto' }}>
           <table className="table">
-            <thead><tr><th>Tube</th><th>Conc.</th><th>Transfer (μL)</th><th>Diluent (μL)</th></tr></thead>
-            <tbody>{rows.map(r => (
-              <tr key={r.step}><td>{r.step}</td><td>{fmt(r.conc)}</td><td>{fmt(r.transferVol)}</td><td>{fmt(r.diluentVol)}</td></tr>
+            <thead><tr><th>Tube</th><th>Conc. <Units>{`(${s.stockUnit})`}</Units></th><th><Units>Diluent (µL)</Units></th><th><Units>Transfer (µL)</Units></th></tr></thead>
+            <tbody>{plan.tubes.map((t) => (
+              <tr key={t.tube}>
+                <td>{t.tube}</td>
+                <td className="highlight">{fmt(t.conc)}</td>
+                <td>{fmtVol(plan.diluent)}</td>
+                <td>{fmtVol(plan.transfer)} <span style={{ color: 'var(--text-muted)' }}>from {t.from}</span></td>
+              </tr>
             ))}</tbody>
           </table>
+          <ol className="steps">
+            <li>Put <strong>{fmtVol(plan.diluent)} µL</strong> diluent in each of {v.steps} tubes.</li>
+            <li>Transfer <strong>{fmtVol(plan.transfer)} µL</strong> stock into tube 1 and mix; continue down the series.</li>
+            <li>Remove and discard {fmtVol(plan.transfer)} µL from the last tube, so every tube holds {fmtVol(plan.diluent)} µL.</li>
+          </ol>
+          {plan.transfer < MIN_PIPETTE_UL && (
+            <Msg kind="warn">The transfer volume is below {MIN_PIPETTE_UL} µL, where pipetting is inaccurate. Raise the final volume or lower the dilution factor.</Msg>
+          )}
+          <Toolbar><CopyButton text={text} /><ClearButton onClick={reset} label="Reset" /></Toolbar>
         </div>
       )}
+      {!plan && <Toolbar><ClearButton onClick={reset} label="Reset" /></Toolbar>}
     </div>
   )
 }
