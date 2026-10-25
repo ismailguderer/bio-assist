@@ -3,7 +3,7 @@ import { MASS, VOLUME, MOLAR, toBase, fromBase, inOtherUnits } from '../units'
 import { COMPOUNDS } from '../data'
 
 const KEYS = ['mass', 'mw', 'vol', 'conc']
-const INITIAL = { mass: '', mw: '', vol: '', conc: '', massUnit: 'mg', volUnit: 'mL', concUnit: 'mM' }
+const INITIAL = { compound: '', mass: '', mw: '', vol: '', conc: '', massUnit: 'mg', volUnit: 'mL', concUnit: 'mM' }
 const LABEL = { mass: 'Mass', mw: 'Molecular Weight', vol: 'Volume', conc: 'Concentration' }
 
 // base units: g, g/mol, L, mol/L; moles = mass / mw = conc * vol
@@ -45,11 +45,13 @@ export default function Molarity() {
   }
 
   const ph = (k) => calcPlaceholder(result?.missing === k, result?.value)
-  const compound = COMPOUNDS.find(([, mw]) => String(mw) === s.mw)?.[0] ?? ''
+  // several compounds can share a MW (HEPES, IPTG), so the chosen name is stored and checked against the MW
+  const compound = (COMPOUNDS.find(([n, mw]) => n === s.compound && String(mw) === s.mw)
+    ?? COMPOUNDS.find(([, mw]) => String(mw) === s.mw))?.[0] ?? ''
 
   return (
     <div>
-      <SelectField label="Compound (optional)" value={compound} onChange={(name) => set({ mw: String(COMPOUNDS.find(([n]) => n === name)?.[1] ?? '') })}
+      <SelectField label="Compound (optional)" value={compound} onChange={(name) => set({ compound: name, mw: String(COMPOUNDS.find(([n]) => n === name)?.[1] ?? '') })}
         options={[{ value: '', label: 'Custom' }, ...COMPOUNDS.map(([n, mw]) => ({ value: n, label: `${n} (${mw} g/mol)` }))]} />
       <NumField label="Mass" value={s.mass} onChange={(mass) => set({ mass })}
         units={Object.keys(MASS)} unit={s.massUnit} onUnit={(massUnit) => set({ massUnit })} placeholder={ph('mass')} />

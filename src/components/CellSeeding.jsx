@@ -40,7 +40,7 @@ export default function CellSeeding() {
   let planMsg = null
   if (c.density) {
     if (perWell === null) planMsg = { kind: 'hint', text: 'Enter the cells you want per well.' }
-    else if (!(perWell > 0) || !(wells >= 1) || !(wellVol > 0) || extra < 0) planMsg = { kind: 'error', text: 'Seeding values must be greater than zero.' }
+    else if (!(perWell > 0) || !(wells >= 1) || !(wellVol > 0) || !(extra >= 0)) planMsg = { kind: 'error', text: 'Seeding values must be greater than zero.' }
     else {
       const n = wells * (1 + extra / 100)
       const totalMl = wellVol * n
