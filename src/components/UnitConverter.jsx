@@ -1,12 +1,8 @@
-import { NumField, SelectField, Msg, Toolbar, ClearButton, usePersist, parseNum, readInputs, fmt, fmtInt } from '../shared'
+import { NumField, SegField, Msg, Result, SolveHint, Toolbar, ClearButton, ShareButton, TextField, usePersist, parseNum, readInputs, fmt, fmtInt, calcPlaceholder } from '../shared'
 import { MOLAR, MASS_CONC, toBase, fromBase, inOtherUnits } from '../units'
+import { NUCLEIC } from '../data'
 
-const MOLECULES = {
-  dsDNA: { per: 660, unit: 'bp' },
-  ssDNA: { per: 330, unit: 'nt' },
-  RNA: { per: 340, unit: 'nt' },
-  Protein: { per: 110, unit: 'aa' },
-}
+const PROTEIN_DA_PER_AA = 110
 const CELLS_PER_OD = 8e8
 const OD_LINEAR_MAX = 1
 const RCF_K = 1.118e-5 // RCF = K · r(cm) · RPM²
@@ -16,14 +12,7 @@ const INITIAL = {
   mw: '', mass: '', massUnit: 'µg/mL', molar: '', molarUnit: 'nM',
   molecule: 'dsDNA', length: '', kda: '',
   od: '', cells: '',
-  radius: '', rpm: '', rcf: '',
-}
-
-const Hint = ({ status, message, a, b }) => {
-  if (status === 'hint') return <Msg>Fill in {a} or {b}; the other is calculated.</Msg>
-  if (status === 'full') return <Msg>Both fields are filled. Clear the one you want to calculate.</Msg>
-  if (status === 'error') return <Msg kind="error">{message}</Msg>
-  return null
+  radius: '', rpm: '', rcf: '', rotorName: '', rotors: [],
 }
 
 function MassMolar({ s, set }) {
@@ -45,45 +34,53 @@ function MassMolar({ s, set }) {
       <NumField label="Molecular Weight (g/mol)" value={s.mw} onChange={(v) => set({ mw: v })} />
       <NumField label="Mass Concentration" value={s.mass} onChange={(v) => set({ mass: v })}
         units={Object.keys(MASS_CONC)} unit={s.massUnit} onUnit={(u) => set({ massUnit: u })}
-        placeholder={res?.missing === 'mass' ? `= ${fmt(res.value)}` : ''} hint="1 µg/mL = 1 ng/µL" />
+        placeholder={calcPlaceholder(res?.missing === 'mass', res?.value)} hint="1 µg/mL = 1 ng/µL" />
       <NumField label="Molar Concentration" value={s.molar} onChange={(v) => set({ molar: v })}
         units={Object.keys(MOLAR)} unit={s.molarUnit} onUnit={(u) => set({ molarUnit: u })}
-        placeholder={res?.missing === 'molar' ? `= ${fmt(res.value)}` : ''} />
+        placeholder={calcPlaceholder(res?.missing === 'molar', res?.value)} />
       {mw === null && <Msg>Enter the molecular weight first.</Msg>}
       {mw !== null && !(mw > 0) && <Msg kind="error">Molecular weight must be a number greater than zero.</Msg>}
-      {mw > 0 && <Hint {...conc} a="the mass" b="the molar concentration" />}
+      {mw > 0 && <SolveHint input={conc} need={1} total={2} />}
       {res && (
-        <div className="result-box">
+        <Result>
           <div className="result-value">{fmt(res.value)} {res.unit}</div>
           {res.others.length > 0 && <div className="result-sub">= {res.others.map((o) => `${fmt(o.value)} ${o.unit}`).join(' | ')}</div>}
-        </div>
+        </Result>
       )}
     </>
   )
 }
 
+const SIZE = {
+  ...NUCLEIC,
+  Protein: { unit: 'aa', mw: (n) => n * PROTEIN_DA_PER_AA, length: (mw) => mw / PROTEIN_DA_PER_AA },
+}
+
 function Size({ s, set }) {
-  const m = MOLECULES[s.molecule]
+  const m = SIZE[s.molecule]
   const size = readInputs(s, ['length', 'kda'], 1)
   let res = null
   if (size.status === 'solve') {
     res = size.values.length !== null
-      ? { missing: 'kda', length: size.values.length, kda: (size.values.length * m.per) / 1000 }
-      : { missing: 'length', kda: size.values.kda, length: (size.values.kda * 1000) / m.per }
+      ? { missing: 'kda', length: size.values.length, kda: m.mw(size.values.length) / 1000 }
+      : { missing: 'length', kda: size.values.kda, length: m.length(size.values.kda * 1000) }
   }
   return (
     <>
-      <SelectField label="Molecule" value={s.molecule} onChange={(v) => set({ molecule: v })} options={Object.keys(MOLECULES)} />
+      <SegField label="Molecule" value={s.molecule} options={Object.keys(SIZE)} onChange={(v) => set({ molecule: v })} />
       <NumField label={`Length (${m.unit})`} value={s.length} onChange={(v) => set({ length: v })}
-        placeholder={res?.missing === 'length' ? `= ${fmt(res.length)}` : ''} />
+        placeholder={calcPlaceholder(res?.missing === 'length', res?.length)} />
       <NumField label="Molecular Weight (kDa)" value={s.kda} onChange={(v) => set({ kda: v })}
-        placeholder={res?.missing === 'kda' ? `= ${fmt(res.kda)}` : ''} />
-      <Hint {...size} a="the length" b="the molecular weight" />
-      {res && (
-        <div className="result-box">
+        placeholder={calcPlaceholder(res?.missing === 'kda', res?.kda)} />
+      <SolveHint input={size} need={1} total={2} />
+      {res && res.length < 1 && <Msg kind="error">That molecular weight is smaller than one {m.unit}.</Msg>}
+      {res && res.length >= 1 && (
+        <Result>
           {fmt(res.length)} {m.unit} ≈ {fmt(res.kda)} kDa = {fmt(res.kda / 1000)} MDa
-          <div className="result-note">Average {m.per} Da per {m.unit}</div>
-        </div>
+          <div className="result-note">
+            {s.molecule === 'Protein' ? `Average ${PROTEIN_DA_PER_AA} Da per amino acid` : 'NEB formula for an average sequence'}
+          </div>
+        </Result>
       )}
     </>
   )
@@ -100,15 +97,15 @@ function Cells({ s, set }) {
   return (
     <>
       <NumField label="OD₆₀₀" value={s.od} onChange={(v) => set({ od: v })}
-        placeholder={res?.missing === 'od' ? `= ${fmt(res.od)}` : ''} />
+        placeholder={calcPlaceholder(res?.missing === 'od', res?.od)} />
       <NumField label="Cells/mL" value={s.cells} onChange={(v) => set({ cells: v })}
-        placeholder={res?.missing === 'cells' ? `= ${fmt(res.cells)}` : ''} />
-      <Hint {...cells} a="OD₆₀₀" b="cells/mL" />
+        placeholder={calcPlaceholder(res?.missing === 'cells', res?.cells)} />
+      <SolveHint input={cells} need={1} total={2} />
       {res && (
-        <div className="result-box">
+        <Result>
           OD₆₀₀ {fmt(res.od)} ≈ {fmt(res.cells)} cells/mL
           <div className="result-note"><i>E. coli</i> approximation: 1 OD ≈ 8 × 10⁸ cells/mL. Calibrate for other strains and spectrophotometers.</div>
-        </div>
+        </Result>
       )}
       {res && res.od > OD_LINEAR_MAX && (
         <Msg kind="warn">Above OD {OD_LINEAR_MAX}, readings are no longer linear. Dilute the culture, measure again, and multiply by the dilution.</Msg>
@@ -118,53 +115,80 @@ function Cells({ s, set }) {
 }
 
 function Speed({ s, set }) {
-  const r = parseNum(s.radius)
-  const speed = readInputs(s, ['rpm', 'rcf'], 1)
+  const speed = readInputs(s, ['radius', 'rpm', 'rcf'], 2)
   let res = null
-  if (r > 0 && speed.status === 'solve') {
-    const { rpm, rcf } = speed.values
-    res = rpm !== null
-      ? { missing: 'rcf', rpm, rcf: RCF_K * r * rpm * rpm }
-      : { missing: 'rpm', rcf, rpm: Math.sqrt(rcf / (RCF_K * r)) }
+  if (speed.status === 'solve') {
+    const { radius, rpm, rcf } = speed.values
+    const [missing] = speed.missing
+    if (missing === 'rcf') res = { missing, radius, rpm, rcf: RCF_K * radius * rpm * rpm }
+    if (missing === 'rpm') res = { missing, radius, rcf, rpm: Math.sqrt(rcf / (RCF_K * radius)) }
+    if (missing === 'radius') res = { missing, rpm, rcf, radius: rcf / (RCF_K * rpm * rpm) }
   }
+  const r = parseNum(s.radius)
+  const canSave = r > 0 && s.rotorName.trim() !== ''
+  const save = () => {
+    const name = s.rotorName.trim()
+    set({ rotors: [...s.rotors.filter((x) => x.name !== name), { name, radius: s.radius }], rotorName: '' })
+  }
+  const formatRadius = (x) => fmt(x, 3)
+
   return (
     <>
       <NumField label="Rotor Radius (cm)" value={s.radius} onChange={(v) => set({ radius: v })}
+        placeholder={calcPlaceholder(res?.missing === 'radius', res?.radius, formatRadius)}
         hint="Use the maximum radius (rmax) from the rotor manual or the rotor itself." />
-      <NumField label="RPM" value={s.rpm} onChange={(v) => set({ rpm: v })}
-        placeholder={res?.missing === 'rpm' ? `= ${fmtInt(res.rpm)}` : ''} />
-      <NumField label="RCF (×g)" value={s.rcf} onChange={(v) => set({ rcf: v })}
-        placeholder={res?.missing === 'rcf' ? `= ${fmtInt(res.rcf)}` : ''} />
-      {r === null && <Msg>Enter the rotor radius first.</Msg>}
-      {r !== null && !(r > 0) && <Msg kind="error">Rotor radius must be a number greater than zero.</Msg>}
-      {r > 0 && <Hint {...speed} a="RPM" b="RCF" />}
-      {res && (
-        <div className="result-box">
-          {fmtInt(res.rpm)} RPM ⟷ {fmtInt(res.rcf)} ×g
-          <div className="result-note">RCF = 1.118 × 10⁻⁵ × r × RPM²</div>
+      {s.rotors.length > 0 && (
+        <div className="chips" role="group" aria-label="Saved rotors">
+          {s.rotors.map((x) => (
+            <span key={x.name} className="chip-pair">
+              <button type="button" className="chip" onClick={() => set({ radius: x.radius })}>{x.name} · {x.radius} cm</button>
+              <button type="button" className="chip chip-x" aria-label={`Remove ${x.name}`}
+                onClick={() => set({ rotors: s.rotors.filter((y) => y.name !== x.name) })}>×</button>
+            </span>
+          ))}
         </div>
+      )}
+      {r > 0 && (
+        <div className="row save-row">
+          <TextField label="Save Rotor As" value={s.rotorName} onChange={(v) => set({ rotorName: v })} placeholder="e.g. Eppendorf 5424" />
+          <button type="button" className="btn" disabled={!canSave} onClick={save}>Save</button>
+        </div>
+      )}
+      <NumField label="RPM" value={s.rpm} onChange={(v) => set({ rpm: v })}
+        placeholder={calcPlaceholder(res?.missing === 'rpm', res?.rpm, fmtInt)} />
+      <NumField label="RCF (×g)" value={s.rcf} onChange={(v) => set({ rcf: v })}
+        placeholder={calcPlaceholder(res?.missing === 'rcf', res?.rcf, fmtInt)} />
+      <SolveHint input={speed} need={2} total={3} />
+      {res && (
+        <Result>
+          <div className="result-value" style={{ fontSize: 18 }}>
+            {fmtInt(res.rpm)} RPM ⟷ {fmtInt(res.rcf)} ×g
+          </div>
+          <div className="result-sub">Rotor radius {formatRadius(res.radius)} cm</div>
+          <div className="result-note">RCF = 1.118 × 10⁻⁵ × r × RPM²</div>
+        </Result>
       )}
     </>
   )
 }
 
 const MODES = {
-  conc: { label: 'Mass ↔ Molar Concentration', Panel: MassMolar, keys: ['mw', 'mass', 'molar'] },
-  size: { label: 'Length ↔ Molecular Weight', Panel: Size, keys: ['length', 'kda'] },
-  od: { label: 'OD₆₀₀ ↔ Cells/mL', Panel: Cells, keys: ['od', 'cells'] },
+  conc: { label: 'Mass ↔ Molar', Panel: MassMolar, keys: ['mw', 'mass', 'molar'] },
+  size: { label: 'Length ↔ MW', Panel: Size, keys: ['length', 'kda'] },
+  od: { label: 'OD₆₀₀ ↔ Cells', Panel: Cells, keys: ['od', 'cells'] },
   rcf: { label: 'RPM ↔ RCF', Panel: Speed, keys: ['radius', 'rpm', 'rcf'] },
 }
 
 export default function UnitConverter() {
   const [s, set] = usePersist('units', INITIAL)
-  const { Panel, keys } = MODES[s.mode]
+  const { Panel, keys } = MODES[s.mode] ?? MODES.conc
   const clear = () => set(Object.fromEntries(keys.map((k) => [k, ''])))
   return (
     <div>
-      <SelectField label="Conversion" value={s.mode} onChange={(mode) => set({ mode })}
+      <SegField label="Conversion" value={s.mode} onChange={(mode) => set({ mode })}
         options={Object.entries(MODES).map(([value, m]) => ({ value, label: m.label }))} />
       <Panel s={s} set={set} />
-      <Toolbar><ClearButton onClick={clear} /></Toolbar>
+      <Toolbar><ShareButton toolKey="units" state={s} /><ClearButton onClick={clear} /></Toolbar>
     </div>
   )
 }

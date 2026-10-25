@@ -1,4 +1,4 @@
-# 🧫 BIO-ASSIST — Wet Lab Toolkit
+# 🧫 BIO-ASSIST: Wet Lab Toolkit
 
 <p>
   <a href="https://ismailguderer.github.io/bio-assist/">
@@ -10,16 +10,16 @@ A lightweight, client-side calculator suite for everyday wet lab work. Runs enti
 
 ## Tools
 
-| Module | Description |
+| Group | Tools |
 |---|---|
-| Molarity | Mass, molecular weight, volume, concentration: fill any three, get the fourth |
-| Dilution | C₁V₁ = C₂V₂: fill any three, get the fourth and the diluent volume |
-| Serial Dilution | Dilution series with equal final volume per tube and a pipetting table |
-| Unit Converter | Mass ↔ molar concentration, length ↔ molecular weight (DNA, RNA, protein), OD₆₀₀ ↔ cells/mL, RPM ↔ RCF |
-| PCR Mix | Master mix for N reactions plus extra %, template added per tube |
-| Buffers | PBS, TAE, TBE, TE, LB, TBS, scaled to any volume and strength |
+| Solutions | Molarity (any three of mass, MW, volume, concentration), Dilution (C₁V₁ = C₂V₂ in molar, mass, %, × units), Serial Dilution, Concentrated Reagents, Buffers |
+| Nucleic Acids | Primer Resuspension, DNA Mass ↔ Moles ↔ Copies, A260 Quantification, Ligation |
+| PCR | Master Mix (templates for PCR, qPCR, RT, or your own), qPCR Plate |
+| Gels | Agarose Gel, SDS-PAGE Gel |
+| Cells | Cell Seeding |
+| Conversions | Unit Converter (mass ↔ molar, length ↔ MW, OD₆₀₀ ↔ cells, RPM ↔ RCF ↔ rotor radius) |
 
-Inputs accept decimal commas, carry units, and are kept in the browser between visits.
+Inputs accept decimal commas and carry units. Values are kept in the browser between visits, and **Copy Link** shares a tool with its current values.
 
 ## Quick Start
 
@@ -28,11 +28,23 @@ npm install
 npm run dev
 ```
 
-## Deploy
+## How It Is Published
 
-Every push to `main` builds the app and deploys it to GitHub Pages through GitHub Actions (`.github/workflows/deploy.yml`).
+The app is served as part of [ismailguderer.github.io/bio-assist](https://ismailguderer.github.io/bio-assist/): the site's build checks out this repo and renders each tool on its own page with `ToolHost` from `src/lib.js`. Each push here runs a build check and then triggers a site rebuild, using the `SITE_DISPATCH_TOKEN` secret (a fine-grained token with Contents: Read and write on the site repo).
 
-> **Note:** If your repo name differs from `bio-assist`, update the `base` field in `vite.config.js` accordingly.
+`npm run dev` runs the standalone version of the app for development.
+
+## Structure
+
+| Path | Contents |
+|---|---|
+| `src/tools.js` | Tool list: ids, names, groups, search keywords |
+| `src/registry.js` | Tool id → component |
+| `src/ToolHost.jsx` | Renders one tool; used by the site and by the standalone app |
+| `src/components/` | One file per tool |
+| `src/shared.jsx` | Inputs, unit pickers, results, saved state, share links |
+| `src/units.js`, `src/data.js` | Unit tables, reagent data, templates |
+| `src/ba.css` | Tool styles, scoped to `.ba` |
 
 ## Tech Stack
 

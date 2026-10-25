@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react'
+import { createContext, useContext, useEffect, useId, useState } from 'react'
 
 /** Volumes below this many µL cannot be pipetted accurately. */
 export const MIN_PIPETTE_UL = 0.5
@@ -30,11 +30,8 @@ export function fmtVol(ul) {
   return String(parseFloat(ul.toFixed(Math.abs(ul) < 10 ? 2 : 1)))
 }
 
-/** Renders the "(…)" parts of a label without text-transform. */
-export function Units({ children }) {
-  return String(children).split(/(\([^)]*\))/).map((part, i) =>
-    part.startsWith('(') ? <span key={i} className="nocase">{part}</span> : part)
-}
+/** Volume in mL shown as µL below 1 mL. */
+export const fmtMl = (ml) => (ml < 1 ? `${fmtVol(ml * 1000)} µL` : `${fmt(ml)} mL`)
 
 /** Whole number with thousands separators. */
 export const fmtInt = (n) => (Number.isFinite(n) ? Math.round(n).toLocaleString('en-US') : '—')
@@ -42,25 +39,88 @@ export const fmtInt = (n) => (Number.isFinite(n) ? Math.round(n).toLocaleString(
 /** Rows of cells -> tab-separated text. */
 export const tsv = (rows) => rows.map((r) => r.join('\t')).join('\n')
 
-/** Object state persisted in localStorage under `ba:<key>`. */
+/** Renders the "(…)" parts of a label without text-transform. */
+export function Units({ children }) {
+  return String(children).split(/(\([^)]*\))/).map((part, i) =>
+    part.startsWith('(') ? <span key={i} className="nocase">{part}</span> : part)
+}
+
+/** Builds links between tools; ToolHost provides the variant for the current page. */
+export const ToolContext = createContext({
+  hrefFor: (id, query = '') => `${location.pathname}${query ? `?${query}` : ''}#${id}`,
+})
+export const useToolLink = () => useContext(ToolContext).hrefFor
+
+/** Shareable string fields of `state` from a ?tool=<key>&… query. */
+function fromQuery(key, initial) {
+  try {
+    const q = new URLSearchParams(location.search)
+    if (q.get('tool') !== key) return null
+    const patch = {}
+    for (const k of Object.keys(initial)) if (typeof initial[k] === 'string' && q.has(k)) patch[k] = q.get(k)
+    return patch
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Object state persisted in localStorage under `ba:<key>`.
+ * A ?tool=<key>&field=value query overrides saved values once, then is removed from the address.
+ */
 export function usePersist(key, initial) {
+  const [fromUrl] = useState(() => fromQuery(key, initial))
   const [state, setState] = useState(() => {
-    try {
-      const saved = localStorage.getItem(`ba:${key}`)
-      return saved ? { ...initial, ...JSON.parse(saved) } : initial
-    } catch {
-      return initial
-    }
+    let saved = {}
+    try { saved = JSON.parse(localStorage.getItem(`ba:${key}`) || '{}') } catch {}
+    return { ...initial, ...saved, ...fromUrl }
   })
   useEffect(() => {
     try { localStorage.setItem(`ba:${key}`, JSON.stringify(state)) } catch {}
   }, [key, state])
+  useEffect(() => {
+    if (fromUrl) history.replaceState(null, '', location.pathname + location.hash)
+  }, [fromUrl])
   const update = (patch) => setState((s) => ({ ...s, ...patch }))
   const reset = () => setState(initial)
   return [state, update, reset]
 }
 
-export function NumField({ label, value, onChange, unit, units, onUnit, placeholder, hint }) {
+/** Query string with the non-empty string fields of a tool's state. */
+export function shareQuery(key, state) {
+  const q = new URLSearchParams({ tool: key })
+  for (const [k, v] of Object.entries(state)) if (typeof v === 'string' && v !== '') q.set(k, v)
+  return q.toString()
+}
+
+/** Segmented single-choice buttons. */
+export function Seg({ label, value, options, onChange, compact = false }) {
+  return (
+    <div className={`seg${compact ? ' seg-compact' : ''}`} role="group" aria-label={label}>
+      {options.map((o) => {
+        const v = typeof o === 'string' ? o : o.value
+        const text = typeof o === 'string' ? o : o.label
+        return (
+          <button key={v} type="button" aria-pressed={v === value} onClick={() => onChange(v)}>{text}</button>
+        )
+      })}
+    </div>
+  )
+}
+
+/** One-tap preset values shown under a field. */
+export function Chips({ label, values, onPick, suffix = '' }) {
+  return (
+    <div className="chips" role="group" aria-label={label}>
+      {values.map((v) => (
+        <button key={v} type="button" className="chip" onClick={() => onPick(String(v))}>{v}{suffix}</button>
+      ))}
+    </div>
+  )
+}
+
+/** Text field for numbers with an optional unit picker: segmented up to 4 units, dropdown above. */
+export function NumField({ label, value, onChange, unit, units, onUnit, placeholder, hint, presets, presetSuffix }) {
   const id = useId()
   return (
     <div className="field">
@@ -73,17 +133,31 @@ export function NumField({ label, value, onChange, unit, units, onUnit, placehol
           inputMode="decimal"
           autoComplete="off"
           spellCheck={false}
+          enterKeyHint="next"
           value={value}
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
         />
-        {units && (
+        {units && units.length <= 4 && <Seg label={`${label} unit`} value={unit} options={units} onChange={onUnit} compact />}
+        {units && units.length > 4 && (
           <select className="select unit" aria-label={`${label} unit`} value={unit} onChange={(e) => onUnit(e.target.value)}>
             {units.map((u) => <option key={u}>{u}</option>)}
           </select>
         )}
       </div>
+      {presets && <Chips label={`${label} presets`} values={presets} onPick={onChange} suffix={presetSuffix} />}
       {hint && <div className="field-hint">{hint}</div>}
+    </div>
+  )
+}
+
+export function TextField({ label, value, onChange, placeholder }) {
+  const id = useId()
+  return (
+    <div className="field">
+      <label className="field-label" htmlFor={id}><Units>{label}</Units></label>
+      <input id={id} className="input" type="text" autoComplete="off" value={value} placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)} />
     </div>
   )
 }
@@ -102,9 +176,34 @@ export function SelectField({ label, value, onChange, options }) {
   )
 }
 
+/** Labelled segmented control as a form field. */
+export function SegField({ label, value, options, onChange }) {
+  return (
+    <div className="field">
+      <div className="field-label"><Units>{label}</Units></div>
+      <Seg label={label} value={value} options={options} onChange={onChange} />
+    </div>
+  )
+}
+
+/** Result area; screen readers announce changes. */
+export function Result({ children, style }) {
+  return <div className="result-box" role="status" aria-live="polite" style={style}>{children}</div>
+}
+
 /** Hint, warning or error shown where the result would be. kind: hint | warn | error */
 export function Msg({ kind = 'hint', children }) {
   return <div className={`msg msg-${kind}`} role={kind === 'error' ? 'alert' : undefined}>{children}</div>
+}
+
+/** Messages for the non-solving states of readInputs(). */
+export function SolveHint({ input, need, total }) {
+  if (input.status === 'hint') {
+    return <Msg>{need === 1 ? `Fill in any one of the ${total} fields; the others are calculated.` : `Fill in any ${need} fields; the ${total - need === 1 ? 'last one is' : 'others are'} calculated.`}</Msg>
+  }
+  if (input.status === 'full') return <Msg>Too many fields are filled. Clear the one you want to calculate.</Msg>
+  if (input.status === 'error') return <Msg kind="error">{input.message}</Msg>
+  return null
 }
 
 export function Toolbar({ children }) {
@@ -127,6 +226,13 @@ export function CopyButton({ text, label = 'Copy Table' }) {
   return <button type="button" className="btn" onClick={copy}>{copied ? 'Copied' : label}</button>
 }
 
+/** Copies a link that reopens this tool with the current values. */
+export function ShareButton({ toolKey, state }) {
+  const hrefFor = useToolLink()
+  const url = new URL(hrefFor(toolKey, shareQuery(toolKey, state)), location.href).href
+  return <CopyButton text={url} label="Copy Link" />
+}
+
 /**
  * Shared logic for "fill any N, get the rest" forms.
  * Returns { status: 'hint' | 'error' | 'full' | 'solve', missing, values }.
@@ -141,3 +247,6 @@ export function readInputs(raw, keys, need) {
   if (filled.length > need) return { status: 'full' }
   return { status: 'solve', missing: keys.filter((k) => values[k] === null), values }
 }
+
+/** Placeholder showing a calculated value in the empty field. */
+export const calcPlaceholder = (isMissing, value, format = fmt) => (isMissing ? `= ${format(value)}` : '')

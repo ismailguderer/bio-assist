@@ -1,4 +1,4 @@
-import { NumField, SelectField, Msg, Toolbar, CopyButton, usePersist, parseNum, fmt, tsv } from '../shared'
+import { NumField, SelectField, SegField, Msg, Toolbar, CopyButton, ShareButton, usePersist, parseNum, fmt, tsv } from '../shared'
 import { VOLUME } from '../units'
 
 const NA2HPO4 = {
@@ -74,7 +74,7 @@ const showMass = (g) => (g < 1 ? `${fmt(g * 1000, 3)} mg` : `${fmt(g, 4)} g`)
 const showLiquid = (mL) => (mL < 1 ? `${fmt(mL * 1000, 3)} µL` : `${fmt(mL, 4)} mL`)
 
 export default function BufferRecipes() {
-  const [s, set] = usePersist('buffer', INITIAL)
+  const [s, set] = usePersist('buffers', INITIAL)
   const buf = BUFFERS[s.buffer]
   const strength = buf.strengths.includes(Number(s.strength)) ? Number(s.strength) : buf.strengths[0]
   const vol = parseNum(s.volume)
@@ -101,12 +101,12 @@ export default function BufferRecipes() {
 
   return (
     <div>
-      <SelectField label="Buffer" value={s.buffer} onChange={(buffer) => set({ buffer, strength: String(BUFFERS[buffer].strengths[0]) })}
+      <SegField label="Buffer" value={s.buffer} onChange={(buffer) => set({ buffer, strength: String(BUFFERS[buffer].strengths[0]) })}
         options={Object.keys(BUFFERS)} />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
         <NumField label="Final Volume" value={s.volume} onChange={(volume) => set({ volume })}
           units={Object.keys(VOLUME)} unit={s.volumeUnit} onUnit={(volumeUnit) => set({ volumeUnit })} />
-        <SelectField label="Strength" value={String(strength)} onChange={(v) => set({ strength: v })}
+        <SegField label="Strength" value={String(strength)} onChange={(v) => set({ strength: v })}
           options={buf.strengths.map((x) => ({ value: String(x), label: `${x}×` }))} />
       </div>
       {s.buffer === 'PBS' && (
@@ -133,7 +133,7 @@ export default function BufferRecipes() {
               {buf.pH && <tr><td>pH</td><td className="highlight" style={{ textAlign: 'right' }}>{buf.pH}</td></tr>}
             </tbody>
           </table>
-          <Toolbar><CopyButton text={text} label="Copy Recipe" /></Toolbar>
+          <Toolbar><CopyButton text={text} label="Copy Recipe" /><ShareButton toolKey="buffers" state={s} /></Toolbar>
         </>
       )}
     </div>

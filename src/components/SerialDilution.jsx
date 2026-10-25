@@ -1,4 +1,4 @@
-import { Units, NumField, Msg, Toolbar, CopyButton, ClearButton, usePersist, parseNum, fmt, fmtVol, tsv, MIN_PIPETTE_UL } from '../shared'
+import { Units, NumField, Msg, Toolbar, CopyButton, ClearButton, ShareButton, usePersist, parseNum, fmt, fmtVol, tsv, MIN_PIPETTE_UL } from '../shared'
 
 const CONC_UNITS = ['M', 'mM', 'µM', 'nM', 'mg/mL', 'µg/mL', 'ng/µL', 'cells/mL', '%']
 const INITIAL = { stock: '100', stockUnit: 'µM', factor: '10', steps: '5', volume: '100' }
@@ -73,7 +73,7 @@ export default function SerialDilution() {
           {plan.transfer < MIN_PIPETTE_UL && (
             <Msg kind="warn">The transfer volume is below {MIN_PIPETTE_UL} µL, where pipetting is inaccurate. Raise the final volume or lower the dilution factor.</Msg>
           )}
-          <Toolbar><CopyButton text={text} /><ClearButton onClick={reset} label="Reset" /></Toolbar>
+          <Toolbar><CopyButton text={text} /><ShareButton toolKey="serial" state={s} /><ClearButton onClick={reset} label="Reset" /></Toolbar>
         </div>
       )}
       {!plan && <Toolbar><ClearButton onClick={reset} label="Reset" /></Toolbar>}

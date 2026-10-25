@@ -1,28 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import styles from './App.module.css'
-import Molarity from './components/Molarity'
-import Dilution from './components/Dilution'
-import SerialDilution from './components/SerialDilution'
-import UnitConverter from './components/UnitConverter'
-import PCRMix from './components/PCRMix'
-import BufferRecipes from './components/BufferRecipes'
-
-const TABS = [
-  { id: 'molarity', label: 'Molarity', icon: '⚗️', Panel: Molarity },
-  { id: 'dilution', label: 'Dilution', icon: '💧', Panel: Dilution },
-  { id: 'serial', label: 'Serial Dilution', icon: '🔬', Panel: SerialDilution },
-  { id: 'units', label: 'Unit Converter', icon: '🔄', Panel: UnitConverter },
-  { id: 'pcr', label: 'PCR Mix', icon: '🧬', Panel: PCRMix },
-  { id: 'buffer', label: 'Buffers', icon: '🧪', Panel: BufferRecipes },
-]
-
-const tabFromHash = () => {
-  const id = window.location.hash.slice(1)
-  return TABS.some((t) => t.id === id) ? id : TABS[0].id
-}
+import ToolHost from './ToolHost'
+import { TOOLS, GROUPS, matchTool } from './tools'
 
 const THEMES = ['auto', 'light', 'dark']
 const THEME_LABEL = { auto: 'Auto', light: 'Light', dark: 'Dark' }
+
+const routeFromHash = () => {
+  const id = window.location.hash.slice(1)
+  return TOOLS.some((t) => t.id === id) ? id : null
+}
 
 function useTheme() {
   const [theme, setTheme] = useState(() => {
@@ -35,94 +22,105 @@ function useTheme() {
   })
 
   useEffect(() => {
-    const media = window.matchMedia('(prefers-color-scheme: light)')
-    const apply = () => {
-      const resolved = theme === 'auto' ? (media.matches ? 'light' : 'dark') : theme
-      document.documentElement.setAttribute('data-theme', resolved)
-    }
-    apply()
+    if (theme === 'auto') document.documentElement.removeAttribute('data-theme')
+    else document.documentElement.setAttribute('data-theme', theme)
     try { localStorage.setItem('ba-theme', theme) } catch {}
-    if (theme !== 'auto') return
-    media.addEventListener('change', apply)
-    return () => media.removeEventListener('change', apply)
   }, [theme])
 
   const next = () => setTheme((t) => THEMES[(THEMES.indexOf(t) + 1) % THEMES.length])
   return [theme, next]
 }
 
+function Home() {
+  const [query, setQuery] = useState('')
+  const search = useRef(null)
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT') {
+        e.preventDefault()
+        search.current?.focus()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  const found = TOOLS.filter((t) => matchTool(t, query))
+  return (
+    <div className={`${styles.content} ${styles.wide}`}>
+      <div className={`field ${styles.search}`}>
+        <label className="field-label" htmlFor="tool-search">Find a Tool</label>
+        <input id="tool-search" ref={search} className="input" type="search" placeholder="e.g. primer, gel, qPCR  (press / to search)"
+          value={query} onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' && found[0]) window.location.hash = found[0].id }} />
+      </div>
+      {GROUPS.map((g) => {
+        const tools = found.filter((t) => t.group === g)
+        if (!tools.length) return null
+        return (
+          <section key={g} className={styles.group} aria-labelledby={`group-${g}`}>
+            <h2 id={`group-${g}`} className={styles.groupTitle}>{g}</h2>
+            <ul className={styles.cards}>
+              {tools.map((t) => (
+                <li key={t.id}>
+                  <a className={styles.card} href={`#${t.id}`}>
+                    <span className={styles.cardIcon} aria-hidden="true">{t.icon}</span>
+                    <span>
+                      <span className={styles.cardName}>{t.name}</span>
+                      <span className={styles.cardDesc} style={{ display: 'block' }}>{t.description}</span>
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )
+      })}
+      {!found.length && <p className={styles.empty}>No tool matches “{query}”.</p>}
+    </div>
+  )
+}
+
 export default function App() {
-  const [tab, setTab] = useState(tabFromHash)
+  const [route, setRoute] = useState(routeFromHash)
   const [theme, nextTheme] = useTheme()
 
   useEffect(() => {
-    const onHash = () => setTab(tabFromHash())
+    const onHash = () => { setRoute(routeFromHash()); window.scrollTo(0, 0) }
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
 
+  const tool = TOOLS.find((t) => t.id === route)
   useEffect(() => {
-    document.getElementById(`tab-${tab}`)?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
-  }, [tab])
-
-  const select = (id) => {
-    setTab(id)
-    history.replaceState(null, '', `#${id}`)
-  }
+    document.title = tool ? `${tool.name} | BIO-ASSIST` : 'BIO-ASSIST | Wet Lab Toolkit'
+  }, [tool])
 
   return (
-    <>
-      <div className={styles.header}>
-        <div className={styles.brand}>
+    <div className="ba page">
+      <header className={styles.header}>
+        <a className={styles.brand} href="#">
           <span className={styles.brandIcon} aria-hidden="true">🧫</span>
-          <div>
-            <div className={styles.brandTitle}>BIO-ASSIST</div>
-            <div className={styles.brandSub}>Wet Lab Toolkit</div>
+          <span>
+            <span className={styles.brandTitle} style={{ display: 'block' }}>BIO-ASSIST</span>
+            <span className={styles.brandSub} style={{ display: 'block' }}>Wet Lab Toolkit</span>
+          </span>
+        </a>
+        <button className="btn" type="button" onClick={nextTheme}>Theme: {THEME_LABEL[theme]}</button>
+      </header>
+      <main>
+        {tool ? (
+          <div className={styles.content}>
+            <a className={styles.back} href="#">← All tools</a>
+            <h1 className={styles.title}>{tool.name}</h1>
+            <p className={styles.lead}>{tool.lead}</p>
+            <ToolHost key={tool.id} id={tool.id} />
           </div>
-        </div>
-        <button className={styles.themeBtn} type="button" onClick={nextTheme}>
-          Theme: {THEME_LABEL[theme]}
-        </button>
-      </div>
-
-      <div className={`${styles.tabs} hide-scrollbar`} role="tablist" aria-label="Tools">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            id={`tab-${t.id}`}
-            type="button"
-            role="tab"
-            aria-selected={tab === t.id}
-            aria-controls={`panel-${t.id}`}
-            tabIndex={tab === t.id ? 0 : -1}
-            onClick={() => select(t.id)}
-            onKeyDown={(e) => {
-              if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return
-              const i = TABS.findIndex((x) => x.id === tab)
-              const n = TABS[(i + (e.key === 'ArrowRight' ? 1 : TABS.length - 1)) % TABS.length]
-              select(n.id)
-              document.getElementById(`tab-${n.id}`)?.focus()
-            }}
-            className={`${styles.tab} ${tab === t.id ? styles.tabActive : ''}`}
-          >
-            <span className={styles.tabIcon} aria-hidden="true">{t.icon}</span>{t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* inactive panels are hidden, not unmounted */}
-      {TABS.map(({ id, Panel }) => (
-        <div
-          key={id}
-          id={`panel-${id}`}
-          role="tabpanel"
-          aria-labelledby={`tab-${id}`}
-          hidden={tab !== id}
-          className={styles.content}
-        >
-          <Panel />
-        </div>
-      ))}
-    </>
+        ) : (
+          <Home />
+        )}
+      </main>
+    </div>
   )
 }
