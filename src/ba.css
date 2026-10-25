@@ -508,3 +508,64 @@
     width: 100%;
   }
 }
+
+/* ── qPCR plate map ── */
+.ba .legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 16px 0 4px;
+  list-style: none;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.ba .legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ba .swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.ba .plate {
+  margin: 12px 0 0;
+}
+
+.ba .plate svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.ba .plate-axis {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  fill: var(--text-muted);
+  text-anchor: middle;
+}
+
+.ba .well {
+  fill: none;
+  stroke: var(--border-primary);
+  stroke-width: 1;
+  cursor: pointer;
+}
+
+.ba .well-on {
+  stroke: none;
+}
+
+.ba .well-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  fill: #1a1d23;
+  text-anchor: middle;
+  pointer-events: none;
+}

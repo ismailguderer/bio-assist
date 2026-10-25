@@ -1,7 +1,7 @@
 import { NumField, SegField, Msg, Result, Toolbar, ClearButton, ShareButton, usePersist, parseNum, fmt } from '../shared'
 
 const FACTORS = { dsDNA: 50, RNA: 40, ssDNA: 33 } // ng/µL per A260 unit at 1 cm
-const INITIAL = { molecule: 'dsDNA', factor: '', a260: '', dilution: '1', path: '1', a280: '', a230: '', elution: '' }
+const INITIAL = { molecule: 'Custom', factor: '', a260: '', dilution: '1', path: '1', a280: '', a230: '', elution: '' }
 const LOW_SIGNAL = 0.1
 
 function purity(molecule, r280, r230) {
@@ -29,7 +29,7 @@ export default function A260() {
 
   let res = null
   let error = null
-  if (a260 !== null) {
+  if (a260 !== null && factor !== null) {
     if (!(a260 > 0) || !(dilution >= 1) || !(path > 0) || !(factor > 0)) error = 'Check the values: absorbance, path length, and factor must be greater than zero; dilution at least 1.'
     else {
       const conc = (a260 * factor * dilution) / path
@@ -45,8 +45,9 @@ export default function A260() {
 
   return (
     <div>
-      <SegField label="Molecule" value={s.molecule} options={[...Object.keys(FACTORS), 'Custom']} onChange={(molecule) => set({ molecule })} />
-      {s.molecule === 'Custom' && <NumField label="Factor (ng/µL per A260)" value={s.factor} onChange={(v) => set({ factor: v })} hint="For oligos, use the factor from the synthesis report." />}
+      <SegField label="Molecule" value={s.molecule} options={['Custom', ...Object.keys(FACTORS)]} onChange={(molecule) => set({ molecule })} />
+      {s.molecule === 'Custom' && <NumField label="Factor (ng/µL per A260)" value={s.factor} onChange={(v) => set({ factor: v })}
+        presets={[50, 40, 33]} hint="50 dsDNA, 40 RNA, 33 ssDNA; for oligos, the factor from the synthesis report." />}
       <div className="grid-2">
         <NumField label="A260" value={s.a260} onChange={(v) => set({ a260: v })} />
         <NumField label="Dilution Factor" value={s.dilution} onChange={(v) => set({ dilution: v })} presets={[1, 10, 50]} />
@@ -56,7 +57,8 @@ export default function A260() {
         <NumField label="Elution Volume (µL, optional)" value={s.elution} onChange={(v) => set({ elution: v })} />
       </div>
 
-      {a260 === null && <Msg>Enter the A260 reading.</Msg>}
+      {factor === null && <Msg>Enter the conversion factor, or pick dsDNA, RNA, or ssDNA.</Msg>}
+      {factor !== null && a260 === null && <Msg>Enter the A260 reading.</Msg>}
       {error && <Msg kind="error">{error}</Msg>}
       {res && (
         <Result>
