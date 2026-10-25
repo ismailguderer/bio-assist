@@ -34,6 +34,15 @@ The app is served as part of [ismailguderer.github.io/bio-assist](https://ismail
 
 `npm run dev` runs the standalone version of the app for development.
 
+## Use It in Your Own Account
+
+Forks deploy the standalone app to their own GitHub Pages; the site rebuild step only runs in this repo.
+
+1. Fork this repo.
+2. In your fork: Settings → Pages → Source: **GitHub Actions**.
+3. Actions tab → enable workflows → run **Build and Deploy**.
+4. The app is live at `https://<username>.github.io/<repo-name>/`; the build sets the path from the repo name.
+
 ## Structure
 
 | Path | Contents |
