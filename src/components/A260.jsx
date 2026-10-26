@@ -54,7 +54,7 @@ export default function A260() {
         <NumField label="A280 (optional)" value={s.a280} onChange={(v) => set({ a280: v })} />
         <NumField label="A230 (optional)" value={s.a230} onChange={(v) => set({ a230: v })} />
         <NumField label="Path Length (cm)" value={s.path} onChange={(v) => set({ path: v })} hint="NanoDrop values are already normalized to 1 cm." />
-        <NumField label="Elution Volume (µL, optional)" value={s.elution} onChange={(v) => set({ elution: v })} />
+        <NumField label="Elution Volume (µL)" value={s.elution} onChange={(v) => set({ elution: v })} hint="Optional; gives the total yield." />
       </div>
 
       {factor === null && <Msg>Enter the conversion factor, or pick dsDNA, RNA, or ssDNA.</Msg>}
