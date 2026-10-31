@@ -2,7 +2,7 @@ import { NumField, SelectField, Msg, Result, Toolbar, ClearButton, ShareButton, 
 import { MOLAR, VOLUME } from '../units'
 import { REAGENTS } from '../data'
 
-const INITIAL = { reagent: REAGENTS[0].name, pct: String(REAGENTS[0].pct), density: String(REAGENTS[0].density), mw: String(REAGENTS[0].mw), target: '', targetUnit: 'M', volume: '', volumeUnit: 'mL' }
+const INITIAL = { reagent: REAGENTS[0].name, pct: String(REAGENTS[0].pct), density: String(REAGENTS[0].density), mw: String(REAGENTS[0].mw), acid: '', target: '', targetUnit: 'M', volume: '', volumeUnit: 'mL' }
 
 export default function Reagents() {
   const [s, set, reset] = usePersist('reagents', INITIAL)
@@ -12,6 +12,7 @@ export default function Reagents() {
   const target = parseNum(s.target)
   const volume = parseNum(s.volume)
   const preset = REAGENTS.find((r) => r.name === s.reagent)
+  const acid = preset ? !!preset.acid : s.acid === '1'
 
   const valid = pct > 0 && pct <= 100 && density > 0 && mw > 0
   // mol/L = (% / 100) × density (g/mL) × 1000 mL/L ÷ MW (g/mol)
@@ -26,17 +27,19 @@ export default function Reagents() {
 
   const pick = (name) => {
     const r = REAGENTS.find((x) => x.name === name)
-    set(r ? { reagent: name, pct: String(r.pct), density: String(r.density), mw: String(r.mw) } : { reagent: '' })
+    set(r ? { reagent: name, acid: r.acid ? '1' : '', pct: String(r.pct), density: String(r.density), mw: String(r.mw) } : { reagent: '', acid: '' })
   }
+  // editing a preset's numbers makes it custom but keeps the acid warning
+  const edit = (patch) => set({ ...patch, reagent: '', acid: acid ? '1' : '' })
 
   return (
     <div>
       <SelectField label="Reagent" value={preset ? s.reagent : ''} onChange={pick}
         options={[...REAGENTS.map((r) => r.name), { value: '', label: 'Custom' }]} />
       <div className="grid-3">
-        <NumField label="Purity (% w/w)" value={s.pct} onChange={(v) => set({ pct: v, reagent: '' })} />
-        <NumField label="Density (g/mL)" value={s.density} onChange={(v) => set({ density: v, reagent: '' })} />
-        <NumField label="MW (g/mol)" value={s.mw} onChange={(v) => set({ mw: v, reagent: '' })} />
+        <NumField label="Purity (% w/w)" value={s.pct} onChange={(v) => edit({ pct: v })} />
+        <NumField label="Density (g/mL)" value={s.density} onChange={(v) => edit({ density: v })} />
+        <NumField label="MW (g/mol)" value={s.mw} onChange={(v) => edit({ mw: v })} />
       </div>
       {!valid && <Msg kind="error">Purity must be 0–100% and density and MW greater than zero.</Msg>}
       {stockM && (
@@ -61,7 +64,7 @@ export default function Reagents() {
           <div className="result-value" style={{ fontSize: 18 }}>{fmtMl(make.concMl)} reagent + {fmtMl(make.volMl - make.concMl)} water</div>
         </Result>
       )}
-      {make && !make.error && preset?.acid && <Msg kind="warn">Add acid to water, never water to acid. Work in a fume hood.</Msg>}
+      {make && !make.error && acid && <Msg kind="warn">Add acid to water, never water to acid. Work in a fume hood.</Msg>}
       <Toolbar><ShareButton toolKey="reagents" state={s} /><ClearButton onClick={reset} label="Reset" /></Toolbar>
     </div>
   )

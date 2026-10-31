@@ -126,6 +126,8 @@ export default function MasterMix() {
     ...Object.entries(MIX_TEMPLATES).map(([value, t]) => ({ value, label: t.name })),
     ...Object.entries(s.saved).map(([value, t]) => ({ value, label: `★ ${t.name}` })),
   ]
+  // a saved template exists only in this browser, so the link carries its components under a built-in name
+  const shareTemplate = MIX_TEMPLATES[s.template] ? s.template : 'pcr'
   const ready = r.mix && !r.overfull
   const text = ready && tsv([
     ['Component', 'Per rxn (µL)', `×${fmt(r.total, 3)} (µL)`],
@@ -183,7 +185,7 @@ export default function MasterMix() {
       </div>
       <Toolbar>
         {ready && <CopyButton text={text} />}
-        <ShareButton toolKey="mastermix" state={s} />
+        <ShareButton toolKey="mastermix" state={{ ...s, template: shareTemplate, loadedTemplate: shareTemplate }} />
         {s.saved[s.template] && <button type="button" className="btn" onClick={removeSaved}>Delete Template</button>}
         <ClearButton onClick={() => loadTemplate(s.template)} label="Reset" />
       </Toolbar>

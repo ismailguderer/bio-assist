@@ -37,7 +37,9 @@ function Home() {
 
   useEffect(() => {
     const onKey = (e) => {
-      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT') {
+      const el = document.activeElement
+      const typing = el && (['INPUT', 'SELECT', 'TEXTAREA'].includes(el.tagName) || el.isContentEditable)
+      if (e.key === '/' && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) {
         e.preventDefault()
         search.current?.focus()
       }

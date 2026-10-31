@@ -32,7 +32,7 @@ function targetWells(v, targetNames, sampleNames) {
       for (let r = 0; r < v.replicates; r++) wells.push({ short: `S${i + 1}`, detail: `Standard ${i + 1}, rep ${r + 1}` })
     }
     for (let i = 0; i < v.ntc; i++) wells.push({ short: 'N', detail: `NTC ${i + 1}` })
-    return { name, color: COLORS[t % COLORS.length], wells }
+    return { name, color: COLORS[t] ?? `hsl(${Math.round(t * 137.5) % 360} 55% 72%)`, wells }
   })
 }
 
@@ -168,8 +168,8 @@ export default function QpcrPlate() {
       {plan && (
         <>
           <ul className="legend" aria-label="Targets">
-            {plan.targets.map((t) => (
-              <li key={t.name}><span className="swatch" style={{ background: t.color }} aria-hidden="true" />{t.name}</li>
+            {plan.targets.map((t, i) => (
+              <li key={`${i}-${t.name}`}><span className="swatch" style={{ background: t.color }} aria-hidden="true" />{t.name}</li>
             ))}
           </ul>
           {plan.plates.map((p, i) => <PlateMap key={i} plate={p} index={i} rows={plan.rows} cols={plan.cols} size={s.plate} onPick={setPicked} />)}

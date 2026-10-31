@@ -1,6 +1,27 @@
-import { useMemo } from 'react'
+import { Component, useMemo } from 'react'
 import { PANELS } from './registry'
-import { ToolContext } from './shared'
+import { Msg, ToolContext } from './shared'
+
+/** A stale saved value or an edited link must not blank the page: offer to reset the tool instead. */
+class ToolBoundary extends Component {
+  state = { failed: false }
+  static getDerivedStateFromError() { return { failed: true } }
+  componentDidCatch(error) { console.error(error) }
+  reset = () => {
+    try { localStorage.removeItem(`ba:${this.props.id}`) } catch {}
+    try { history.replaceState(null, '', location.pathname + location.hash) } catch {}
+    this.setState({ failed: false })
+  }
+  render() {
+    if (!this.state.failed) return this.props.children
+    return (
+      <div>
+        <Msg kind="error">This tool could not read its saved values or the link you opened.</Msg>
+        <button type="button" className="btn" onClick={this.reset}>Reset Tool</button>
+      </div>
+    )
+  }
+}
 
 /** Enter in a text field moves focus to the next field. */
 function nextFieldOnEnter(e) {
@@ -28,7 +49,7 @@ export default function ToolHost({ id, base }) {
   return (
     <ToolContext.Provider value={link}>
       <div className="ba" onKeyDown={nextFieldOnEnter}>
-        <Panel />
+        <ToolBoundary id={id}><Panel /></ToolBoundary>
       </div>
     </ToolContext.Provider>
   )

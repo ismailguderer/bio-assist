@@ -3,9 +3,11 @@ import { createContext, useContext, useEffect, useId, useState } from 'react'
 /** Volumes below this many µL cannot be pipetted accurately. */
 export const MIN_PIPETTE_UL = 0.5
 
-/** Parse user input: accepts "0,5" and "0.5"; empty -> null; garbage -> NaN. */
+/** Parse user input: accepts "0,5", "0.5" and "10,000"; empty -> null; garbage -> NaN. */
 export function parseNum(text) {
-  const t = String(text ?? '').trim().replace(',', '.')
+  const raw = String(text ?? '').trim()
+  // comma-grouped thousands ("10,000", "1,500.5"); a leading 0 ("0,500") stays a decimal comma
+  const t = /^[-+]?[1-9]\d{0,2}(,\d{3})+(\.\d+)?$/.test(raw) ? raw.replace(/,/g, '') : raw.replace(',', '.')
   if (t === '') return null
   return /^[-+]?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?$/i.test(t) ? Number(t) : NaN
 }
@@ -57,7 +59,14 @@ function fromQuery(key, initial) {
     const q = new URLSearchParams(location.search)
     if (q.get('tool') !== key) return null
     const patch = {}
-    for (const k of Object.keys(initial)) if (typeof initial[k] === 'string' && q.has(k)) patch[k] = q.get(k)
+    for (const k of Object.keys(initial)) {
+      if (!q.has(k)) continue
+      if (typeof initial[k] === 'string') patch[k] = q.get(k)
+      else if (Array.isArray(initial[k])) {
+        const list = JSON.parse(q.get(k))
+        if (Array.isArray(list)) patch[k] = list
+      }
+    }
     return patch
   } catch {
     return null
@@ -89,7 +98,10 @@ export function usePersist(key, initial) {
 /** Query string with the non-empty string fields of a tool's state. */
 export function shareQuery(key, state) {
   const q = new URLSearchParams({ tool: key })
-  for (const [k, v] of Object.entries(state)) if (typeof v === 'string' && v !== '') q.set(k, v)
+  for (const [k, v] of Object.entries(state)) {
+    if (typeof v === 'string' && v !== '') q.set(k, v)
+    else if (Array.isArray(v) && v.length) q.set(k, JSON.stringify(v))
+  }
   return q.toString()
 }
 
