@@ -42,7 +42,8 @@ function targetWells(v, targetNames, sampleNames) {
 }
 
 /**
- * Places wells plate by plate without splitting a target unless it is larger than a plate.
+ * Places wells plate by plate without splitting a target unless it is larger than a plate;
+ * oversized targets fill the room left on the previous plate instead of starting a new one.
  * `aligned`: each target starts on a new row (or column) for readability.
  */
 function place(targets, size, fill, aligned) {
@@ -56,7 +57,8 @@ function place(targets, size, fill, aligned) {
   for (const target of targets) {
     const n = target.wells.length
     if (aligned) pos = Math.ceil(pos / lineLen) * lineLen
-    if (pos + Math.min(n, capacity) > capacity) { plate = { wells: {} }; plates.push(plate); pos = 0 }
+    // a target that fits on a plate never straddles two; one larger than a plate must, so it continues where the last ended
+    if (n <= capacity && pos + n > capacity) { plate = { wells: {} }; plates.push(plate); pos = 0 }
     for (const w of target.wells) {
       if (pos >= capacity) { split = true; plate = { wells: {} }; plates.push(plate); pos = 0 }
       const line = Math.floor(pos / lineLen)
