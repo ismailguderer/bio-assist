@@ -2,6 +2,7 @@ import { Units, NumField, Msg, Toolbar, CopyButton, ClearButton, ShareButton, us
 
 const CONC_UNITS = ['M', 'mM', 'µM', 'nM', 'mg/mL', 'µg/mL', 'ng/µL', 'cells/mL', '%']
 const INITIAL = { stock: '100', stockUnit: 'µM', factor: '10', steps: '5', volume: '100' }
+const CHOICES = { stockUnit: CONC_UNITS }
 const MAX_STEPS = 30
 
 function check(s) {
@@ -15,7 +16,7 @@ function check(s) {
 }
 
 export default function SerialDilution() {
-  const [s, set, reset] = usePersist('serial', INITIAL)
+  const [s, set, reset] = usePersist('serial', INITIAL, CHOICES)
   const { v, error } = check(s)
 
   let plan = null

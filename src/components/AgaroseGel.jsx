@@ -1,9 +1,10 @@
 import { NumField, SegField, Msg, Result, Toolbar, CopyButton, ClearButton, ShareButton, usePersist, parseNum, fmt, fmtVol, tsv } from '../shared'
 
 const INITIAL = { pct: '1', volume: '50', buffer: 'TAE', stain: '10000' }
+const CHOICES = { buffer: ['TAE', 'TBE'] }
 
 export default function AgaroseGel() {
-  const [s, set, reset] = usePersist('agarose', INITIAL)
+  const [s, set, reset] = usePersist('agarose', INITIAL, CHOICES)
   const pct = parseNum(s.pct)
   const volume = parseNum(s.volume)
   const stain = parseNum(s.stain)

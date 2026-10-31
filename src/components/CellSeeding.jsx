@@ -5,6 +5,7 @@ const INITIAL = {
   method: 'hemocytometer', live: '', dead: '', squares: '4', dilution: '2', density: '',
   plate: '24-well', wells: '24', perWell: '', wellVol: '0.5', extra: '10',
 }
+const CHOICES = { method: ['hemocytometer', 'counter'], plate: Object.keys(PLATES) }
 const HEMOCYTOMETER_FACTOR = 1e4 // one large square holds 0.1 µL
 
 function count(s) {
@@ -29,7 +30,7 @@ function count(s) {
 }
 
 export default function CellSeeding() {
-  const [s, set, reset] = usePersist('seeding', INITIAL)
+  const [s, set, reset] = usePersist('seeding', INITIAL, CHOICES)
   const c = count(s)
   const wells = parseNum(s.wells)
   const perWell = parseNum(s.perWell)

@@ -4,8 +4,10 @@ import { REAGENTS } from '../data'
 
 const INITIAL = { reagent: REAGENTS[0].name, pct: String(REAGENTS[0].pct), density: String(REAGENTS[0].density), mw: String(REAGENTS[0].mw), acid: '', target: '', targetUnit: 'M', volume: '', volumeUnit: 'mL' }
 
+const CHOICES = { reagent: ['', ...REAGENTS.map((r) => r.name)], targetUnit: ['M', 'mM'], volumeUnit: Object.keys(VOLUME) }
+
 export default function Reagents() {
-  const [s, set, reset] = usePersist('reagents', INITIAL)
+  const [s, set, reset] = usePersist('reagents', INITIAL, CHOICES)
   const pct = parseNum(s.pct)
   const density = parseNum(s.density)
   const mw = parseNum(s.mw)

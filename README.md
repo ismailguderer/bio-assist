@@ -58,5 +58,5 @@ Forks deploy the standalone app to their own GitHub Pages; the site rebuild step
 ## Tech Stack
 
 - React 18
-- Vite 5
+- Vite 8
 - Self-hosted fonts (Fontsource), no external requests

@@ -555,6 +555,11 @@
   stroke: var(--border-primary);
   stroke-width: 1;
   cursor: pointer;
+  pointer-events: all;
+}
+
+.ba .plate .field-hint {
+  min-height: 1.4em;
 }
 
 .ba .well-on {

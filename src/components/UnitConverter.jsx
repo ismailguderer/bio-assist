@@ -65,6 +65,7 @@ function Size({ s, set }) {
       ? { missing: 'kda', length: size.values.length, kda: m.mw(size.values.length) / 1000 }
       : { missing: 'length', kda: size.values.kda, length: m.length(size.values.kda * 1000) }
   }
+  const tooSmall = res?.missing === 'length' && res.length < 1
   return (
     <>
       <SegField label="Molecule" value={s.molecule} options={Object.keys(SIZE)} onChange={(v) => set({ molecule: v })} />
@@ -73,8 +74,8 @@ function Size({ s, set }) {
       <NumField label="Molecular Weight (kDa)" value={s.kda} onChange={(v) => set({ kda: v })}
         placeholder={calcPlaceholder(res?.missing === 'kda', res?.kda)} />
       <SolveHint input={size} need={1} total={2} />
-      {res && res.length < 1 && <Msg kind="error">That molecular weight is smaller than one {m.unit}.</Msg>}
-      {res && res.length >= 1 && (
+      {tooSmall && <Msg kind="error">That molecular weight is smaller than one {m.unit}.</Msg>}
+      {res && !tooSmall && (
         <Result>
           {fmt(res.length)} {m.unit} ≈ {fmt(res.kda)} kDa = {fmt(res.kda / 1000)} MDa
           <div className="result-note">
@@ -179,8 +180,10 @@ const MODES = {
   rcf: { label: 'RPM ↔ RCF', Panel: Speed, keys: ['radius', 'rpm', 'rcf'] },
 }
 
+const CHOICES = { mode: Object.keys(MODES), molecule: Object.keys(SIZE), massUnit: Object.keys(MASS_CONC), molarUnit: Object.keys(MOLAR) }
+
 export default function UnitConverter() {
-  const [s, set] = usePersist('units', INITIAL)
+  const [s, set] = usePersist('units', INITIAL, CHOICES)
   const { Panel, keys } = MODES[s.mode] ?? MODES.conc
   const clear = () => set(Object.fromEntries(keys.map((k) => [k, ''])))
   return (

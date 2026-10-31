@@ -1,6 +1,6 @@
-import { Component, useMemo } from 'react'
+import { Component, useMemo, useState } from 'react'
 import { PANELS } from './registry'
-import { Msg, ToolContext } from './shared'
+import { LinkNoticeContext, Msg, Toolbar, ToolContext, USER_DATA } from './shared'
 
 /** A stale saved value or an edited link must not blank the page: offer to reset the tool instead. */
 class ToolBoundary extends Component {
@@ -8,7 +8,16 @@ class ToolBoundary extends Component {
   static getDerivedStateFromError() { return { failed: true } }
   componentDidCatch(error) { console.error(error) }
   reset = () => {
-    try { localStorage.removeItem(`ba:${this.props.id}`) } catch {}
+    try {
+      // keep what the user made (saved templates, rotors); drop the fields that may have broken the tool
+      const key = `ba:${this.props.id}`
+      const saved = JSON.parse(localStorage.getItem(key) || '{}')
+      const keep = Object.fromEntries(USER_DATA.filter((k) => saved[k] && typeof saved[k] === 'object').map((k) => [k, saved[k]]))
+      if (Object.keys(keep).length) localStorage.setItem(key, JSON.stringify(keep))
+      else localStorage.removeItem(key)
+    } catch {
+      try { localStorage.removeItem(`ba:${this.props.id}`) } catch {}
+    }
     try { history.replaceState(null, '', location.pathname + location.hash) } catch {}
     this.setState({ failed: false })
   }
@@ -23,10 +32,10 @@ class ToolBoundary extends Component {
   }
 }
 
-/** Enter in a text field moves focus to the next field. */
+/** Enter in a text field moves focus to the next text field; selects are skipped because Enter does nothing there. */
 function nextFieldOnEnter(e) {
   if (e.key !== 'Enter' || e.target.tagName !== 'INPUT') return
-  const fields = [...e.currentTarget.querySelectorAll('input, select')].filter((el) => !el.disabled && el.offsetParent !== null)
+  const fields = [...e.currentTarget.querySelectorAll('input')].filter((el) => !el.disabled && el.offsetParent !== null)
   const i = fields.indexOf(e.target)
   if (i >= 0 && i < fields.length - 1) {
     e.preventDefault()
@@ -45,12 +54,24 @@ export default function ToolHost({ id, base }) {
       ? (toolId, query = '') => `${base}${toolId}/${query ? `?${query}` : ''}`
       : (toolId, query = '') => `${location.pathname}${query ? `?${query}` : ''}#${toolId}`,
   }), [base])
+  const [linkNotice, setLinkNotice] = useState(null)
   if (!Panel) return null
   return (
     <ToolContext.Provider value={link}>
-      <div className="ba" onKeyDown={nextFieldOnEnter}>
-        <ToolBoundary id={id}><Panel /></ToolBoundary>
-      </div>
+      <LinkNoticeContext.Provider value={setLinkNotice}>
+        <div className="ba" onKeyDown={nextFieldOnEnter}>
+          {linkNotice && (
+            <div>
+              <Msg kind="warn">Opened from a shared link. These values are not saved yet.</Msg>
+              <Toolbar>
+                <button type="button" className="btn" onClick={linkNotice.keep}>Keep These Values</button>
+                <button type="button" className="btn" onClick={linkNotice.restore}>Restore Mine</button>
+              </Toolbar>
+            </div>
+          )}
+          <ToolBoundary id={id}><Panel /></ToolBoundary>
+        </div>
+      </LinkNoticeContext.Provider>
     </ToolContext.Provider>
   )
 }

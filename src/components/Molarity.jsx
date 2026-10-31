@@ -4,6 +4,7 @@ import { COMPOUNDS } from '../data'
 
 const KEYS = ['mass', 'mw', 'vol', 'conc']
 const INITIAL = { compound: '', mass: '', mw: '', vol: '', conc: '', massUnit: 'mg', volUnit: 'mL', concUnit: 'mM' }
+const CHOICES = { massUnit: Object.keys(MASS), volUnit: Object.keys(VOLUME), concUnit: Object.keys(MOLAR) }
 const LABEL = { mass: 'Mass', mw: 'Molecular Weight', vol: 'Volume', conc: 'Concentration' }
 
 // base units: g, g/mol, L, mol/L; moles = mass / mw = conc * vol
@@ -17,7 +18,7 @@ function solve(missing, v) {
 }
 
 export default function Molarity() {
-  const [s, set, reset] = usePersist('molarity', INITIAL)
+  const [s, set, reset] = usePersist('molarity', INITIAL, CHOICES)
   const input = readInputs(s, KEYS, 3)
 
   let result = null

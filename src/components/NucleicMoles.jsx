@@ -3,9 +3,10 @@ import { DNA_MASS, MOLES, toBase, fromBase } from '../units'
 import { NUCLEIC, AVOGADRO } from '../data'
 
 const INITIAL = { molecule: 'dsDNA', length: '', mass: '', massUnit: 'ng', moles: '', molesUnit: 'pmol', copies: '' }
+const CHOICES = { molecule: Object.keys(NUCLEIC), massUnit: Object.keys(DNA_MASS), molesUnit: Object.keys(MOLES) }
 
 export default function NucleicMoles() {
-  const [s, set, reset] = usePersist('nucleic', INITIAL)
+  const [s, set, reset] = usePersist('nucleic', INITIAL, CHOICES)
   const m = NUCLEIC[s.molecule]
   const length = parseNum(s.length)
   const amount = readInputs(s, ['mass', 'moles', 'copies'], 1)

@@ -12,6 +12,14 @@ export function parseNum(text) {
   return /^[-+]?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?$/i.test(t) ? Number(t) : NaN
 }
 
+/** "2,500" reads as 2500 but could mean 2.5 with a decimal comma. Returns a note, or null. */
+export function commaNote(text) {
+  const raw = String(text ?? '').trim()
+  if (!/^[-+]?[1-9]\d{0,2},\d{3}$/.test(raw)) return null
+  const n = raw.replace(',', '')
+  return `Read "${raw}" as ${n}. For a decimal, type ${raw.replace(',', '.')}.`
+}
+
 const SUP = { '-': '⁻', 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' }
 
 /** General number: `sig` significant digits; scientific notation for very large or small values. */
@@ -53,7 +61,13 @@ export const ToolContext = createContext({
 })
 export const useToolLink = () => useContext(ToolContext).hrefFor
 
-/** Shareable string fields of `state` from a ?tool=<key>&… query. */
+/** List fields that travel in share links (the other lists are saved data that stays in the browser). */
+const SHARED_LISTS = ['components']
+
+/** Saved data kept when a crashed tool is reset: user-made templates and rotors. */
+export const USER_DATA = ['saved', 'rotors']
+
+/** Shareable fields of `state` from a ?tool=<key>&… query. */
 function fromQuery(key, initial) {
   try {
     const q = new URLSearchParams(location.search)
@@ -62,7 +76,7 @@ function fromQuery(key, initial) {
     for (const k of Object.keys(initial)) {
       if (!q.has(k)) continue
       if (typeof initial[k] === 'string') patch[k] = q.get(k)
-      else if (Array.isArray(initial[k])) {
+      else if (SHARED_LISTS.includes(k) && Array.isArray(initial[k])) {
         const list = JSON.parse(q.get(k))
         if (Array.isArray(list)) patch[k] = list
       }
@@ -73,25 +87,49 @@ function fromQuery(key, initial) {
   }
 }
 
+/** ToolHost provides a setter for the "opened from a shared link" notice. */
+export const LinkNoticeContext = createContext(null)
+
 /**
  * Object state persisted in localStorage under `ba:<key>`.
- * A ?tool=<key>&field=value query overrides saved values once, then is removed from the address.
+ * A ?tool=<key>&field=value query overrides saved values, then is removed from the address.
+ * Those values stay unsaved until the user keeps them (notice buttons) or edits a field.
+ * `choices` maps a field to its allowed values (an array, or a function of the state); anything else
+ * from storage or a link falls back to the initial value.
  */
-export function usePersist(key, initial) {
+export function usePersist(key, initial, choices = {}) {
+  const notify = useContext(LinkNoticeContext)
   const [fromUrl] = useState(() => fromQuery(key, initial))
-  const [state, setState] = useState(() => {
-    let saved = {}
-    try { saved = JSON.parse(localStorage.getItem(`ba:${key}`) || '{}') } catch {}
-    return { ...initial, ...saved, ...fromUrl }
+  const [saved] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(`ba:${key}`) || '{}') } catch { return {} }
   })
+  const clean = (s) => {
+    const out = { ...s }
+    for (const [k, allowed] of Object.entries(choices)) {
+      const list = typeof allowed === 'function' ? allowed(out) : allowed
+      if (!list.includes(out[k])) out[k] = initial[k]
+    }
+    return out
+  }
+  const [state, setState] = useState(() => clean({ ...initial, ...saved, ...fromUrl }))
+  const [held, setHeld] = useState(() => !!notify && !!fromUrl && Object.keys(fromUrl).length > 0)
   useEffect(() => {
+    if (held) return
     try { localStorage.setItem(`ba:${key}`, JSON.stringify(state)) } catch {}
-  }, [key, state])
+  }, [key, state, held])
   useEffect(() => {
     if (fromUrl) history.replaceState(null, '', location.pathname + location.hash)
   }, [fromUrl])
-  const update = (patch) => setState((s) => ({ ...s, ...patch }))
-  const reset = () => setState(initial)
+  useEffect(() => {
+    if (!held) return
+    notify({
+      keep: () => setHeld(false),
+      restore: () => { setState(clean({ ...initial, ...saved })); setHeld(false) },
+    })
+    return () => notify(null)
+  }, [held])
+  const update = (patch) => { setHeld(false); setState((s) => ({ ...s, ...patch })) }
+  const reset = () => { setHeld(false); setState(initial) }
   return [state, update, reset]
 }
 
@@ -100,7 +138,7 @@ export function shareQuery(key, state) {
   const q = new URLSearchParams({ tool: key })
   for (const [k, v] of Object.entries(state)) {
     if (typeof v === 'string' && v !== '') q.set(k, v)
-    else if (Array.isArray(v) && v.length) q.set(k, JSON.stringify(v))
+    else if (SHARED_LISTS.includes(k) && Array.isArray(v) && v.length) q.set(k, JSON.stringify(v))
   }
   return q.toString()
 }
@@ -159,6 +197,7 @@ export function NumField({ label, value, onChange, unit, units, onUnit, placehol
       </div>
       {presets && <Chips label={`${label} presets`} values={presets} onPick={onChange} suffix={presetSuffix} />}
       {hint && <div className="field-hint">{hint}</div>}
+      {commaNote(value) && <div className="field-hint" role="status">{commaNote(value)}</div>}
     </div>
   )
 }
@@ -227,15 +266,17 @@ export function ClearButton({ onClick, label = 'Clear' }) {
 }
 
 export function CopyButton({ text, label = 'Copy Table' }) {
-  const [copied, setCopied] = useState(false)
+  const [result, setResult] = useState('')
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(text)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    } catch {}
+      setResult('Copied')
+    } catch {
+      setResult('Copy Failed')
+    }
+    setTimeout(() => setResult(''), 1500)
   }
-  return <button type="button" className="btn" onClick={copy}>{copied ? 'Copied' : label}</button>
+  return <button type="button" className="btn" onClick={copy}>{result || label}</button>
 }
 
 /** Copies a link that reopens this tool with the current values. */

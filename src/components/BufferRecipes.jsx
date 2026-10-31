@@ -1,4 +1,4 @@
-import { NumField, SelectField, SegField, Msg, Toolbar, CopyButton, ShareButton, usePersist, parseNum, fmt, tsv } from '../shared'
+import { NumField, SelectField, SegField, Msg, Toolbar, CopyButton, ClearButton, ShareButton, usePersist, parseNum, fmt, tsv } from '../shared'
 import { VOLUME } from '../units'
 
 const NA2HPO4 = {
@@ -70,11 +70,13 @@ const BUFFERS = {
 
 const INITIAL = { buffer: 'PBS', volume: '1', volumeUnit: 'L', strength: '1', hydrate: 'anhydrous' }
 
-const showMass = (g) => (g < 1 ? `${fmt(g * 1000, 3)} mg` : `${fmt(g, 4)} g`)
+const CHOICES = { buffer: Object.keys(BUFFERS), volumeUnit: Object.keys(VOLUME), hydrate: Object.keys(NA2HPO4) }
+
+const showMass =(g) => (g < 1 ? `${fmt(g * 1000, 3)} mg` : `${fmt(g, 4)} g`)
 const showLiquid = (mL) => (mL < 1 ? `${fmt(mL * 1000, 3)} µL` : `${fmt(mL, 4)} mL`)
 
 export default function BufferRecipes() {
-  const [s, set] = usePersist('buffers', INITIAL)
+  const [s, set, reset] = usePersist('buffers', INITIAL, CHOICES)
   const buf = BUFFERS[s.buffer]
   const strength = buf.strengths.includes(Number(s.strength)) ? Number(s.strength) : buf.strengths[0]
   const vol = parseNum(s.volume)
@@ -136,6 +138,7 @@ export default function BufferRecipes() {
           <Toolbar><CopyButton text={text} label="Copy Recipe" /><ShareButton toolKey="buffers" state={s} /></Toolbar>
         </>
       )}
+      <Toolbar><ClearButton onClick={reset} label="Reset" /></Toolbar>
     </div>
   )
 }

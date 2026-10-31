@@ -6,6 +6,7 @@ const INITIAL = { c1: '', v1: '', c2: '', v2: '', c1Unit: 'mM', v1Unit: 'µL', c
 const LABEL = { c1: 'C₁ Stock Concentration', v1: 'V₁ Stock Volume', c2: 'C₂ Final Concentration', v2: 'V₂ Final Volume' }
 const CONC_UNITS = Object.keys(ANY_CONC)
 const VOL_UNITS = Object.keys(VOLUME)
+const CHOICES = { c1Unit: CONC_UNITS, c2Unit: CONC_UNITS, v1Unit: VOL_UNITS, v2Unit: VOL_UNITS }
 
 const unitKey = (k) => `${k}Unit`
 const factor = (k, unit) => (k.startsWith('c') ? ANY_CONC[unit].f : VOLUME[unit])
@@ -21,7 +22,7 @@ function solve(missing, b) {
 }
 
 export default function Dilution() {
-  const [s, set, reset] = usePersist('dilution', INITIAL)
+  const [s, set, reset] = usePersist('dilution', INITIAL, CHOICES)
   const sameFamily = ANY_CONC[s.c1Unit].family === ANY_CONC[s.c2Unit].family
   const input = readInputs(s, KEYS, 3)
 

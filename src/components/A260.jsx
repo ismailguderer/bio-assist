@@ -2,6 +2,7 @@ import { NumField, SegField, Msg, Result, Toolbar, ClearButton, ShareButton, use
 
 const FACTORS = { dsDNA: 50, RNA: 40, ssDNA: 33 } // ng/µL per A260 unit at 1 cm
 const INITIAL = { molecule: 'Custom', factor: '', a260: '', dilution: '1', path: '1', a280: '', a230: '', elution: '' }
+const CHOICES = { molecule: ['Custom', ...Object.keys(FACTORS)] }
 const LOW_SIGNAL = 0.1
 
 function purity(molecule, r280, r230) {
@@ -18,7 +19,7 @@ function purity(molecule, r280, r230) {
 }
 
 export default function A260() {
-  const [s, set, reset] = usePersist('a260', INITIAL)
+  const [s, set, reset] = usePersist('a260', INITIAL, CHOICES)
   const a260 = parseNum(s.a260)
   const dilution = parseNum(s.dilution)
   const path = parseNum(s.path)

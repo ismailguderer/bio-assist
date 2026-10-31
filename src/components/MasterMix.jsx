@@ -19,6 +19,8 @@ const INITIAL = {
   saved: {},
 }
 
+const CHOICES = { template: (s) => [...Object.keys(MIX_TEMPLATES), ...Object.keys(s.saved ?? {})] }
+
 function templateFor(s, key) {
   if (MIX_TEMPLATES[key]) return MIX_TEMPLATES[key]
   if (s.saved[key]) return s.saved[key]
@@ -55,7 +57,7 @@ function compute(s) {
   }
   const used = rows.filter((r) => r.kind !== 'fill').reduce((sum, r) => sum + r.perRxn, 0)
   const fill = rows.find((r) => r.kind === 'fill')
-  if (fill) fill.perRxn = rv - used
+  if (fill) fill.perRxn = Math.abs(rv - used) < 1e-9 ? 0 : rv - used
   const total = n * (1 + extra / 100)
   const mix = rows.filter((r) => r.kind !== 'tube')
   const tube = rows.filter((r) => r.kind === 'tube')
@@ -101,7 +103,7 @@ function ComponentRow({ c, onChange, onRemove }) {
 }
 
 export default function MasterMix() {
-  const [s, set] = usePersist('mastermix', INITIAL)
+  const [s, set] = usePersist('mastermix', INITIAL, CHOICES)
 
   useEffect(() => {
     if (s.loadedTemplate === s.template) return

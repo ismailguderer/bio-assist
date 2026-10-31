@@ -5,9 +5,12 @@ const INITIAL = {
   samples: '', targets: '2', replicates: '3', standards: '0', ntc: '3', plate: '96', chemistry: 'sybr', fill: 'rows',
   targetNames: '', sampleNames: '',
 }
+const CHOICES = { plate: ['96', '384'], fill: ['rows', 'cols'], chemistry: ['sybr', 'taqman'] }
 const PLATES = { 96: { rows: 8, cols: 12 }, 384: { rows: 16, cols: 24 } }
 const COLORS = ['#8ecae6', '#ffb703', '#90be6d', '#f28482', '#cdb4db', '#f6bd60', '#84a59d', '#a2d2ff']
 const ROW_LETTERS = 'ABCDEFGHIJKLMNOP'
+/** Largest plan the page will draw: 12 full 384-well plates. */
+const MAX_WELLS = 4608
 
 const splitNames = (text) => text.split(/[,\n]/).map((x) => x.trim()).filter(Boolean)
 
@@ -16,6 +19,8 @@ function check(s) {
   if (v.samples === null) return { hint: 'Enter the number of samples.' }
   if (Object.values(v).some((x) => x === null || !Number.isInteger(x) || x < 0)) return { error: 'Use whole numbers of zero or more.' }
   if (v.samples < 1 || v.targets < 1 || v.replicates < 1) return { error: 'Samples, targets, and replicates must be at least 1.' }
+  const wells = v.targets * ((v.samples + v.standards) * v.replicates + v.ntc)
+  if (wells > MAX_WELLS) return { error: `This plan needs ${wells.toLocaleString('en-US')} wells; the limit is ${MAX_WELLS.toLocaleString('en-US')}. Split it into separate runs.` }
   return { v }
 }
 
@@ -71,7 +76,7 @@ function layout(targets, size, fill) {
   return aligned.plates.length <= packed.plates.length ? aligned : packed
 }
 
-function PlateMap({ plate, index, rows, cols, size, onPick }) {
+function PlateMap({ plate, index, rows, cols, size, message, onPick }) {
   const cell = 30
   const pad = 22
   const small = size === '384'
@@ -96,7 +101,7 @@ function PlateMap({ plate, index, rows, cols, size, onPick }) {
           return (
             <g key={k}>
               <circle cx={cx} cy={cy} r={cell / 2 - 2} className={w ? 'well well-on' : 'well'} style={w ? { fill: w.target.color } : undefined}
-                onClick={() => onPick(w ? `Plate ${index + 1}, ${ROW_LETTERS[r]}${c + 1}: ${w.target.name}, ${w.detail}` : `Plate ${index + 1}, ${ROW_LETTERS[r]}${c + 1}: empty`)}>
+                onClick={() => onPick({ plate: index, text: w ? `${ROW_LETTERS[r]}${c + 1}: ${w.target.name}, ${w.detail}` : `${ROW_LETTERS[r]}${c + 1}: empty` })}>
                 <title>{w ? `${ROW_LETTERS[r]}${c + 1}: ${w.target.name}, ${w.detail}` : `${ROW_LETTERS[r]}${c + 1}: empty`}</title>
               </circle>
               {w && !small && <text x={cx} y={cy + 4} className="well-text">{w.short}</text>}
@@ -104,14 +109,15 @@ function PlateMap({ plate, index, rows, cols, size, onPick }) {
           )
         })}
       </svg>
+      <p className="field-hint" role="status" aria-live="polite">{message}</p>
     </figure>
   )
 }
 
 export default function QpcrPlate() {
-  const [s, set, reset] = usePersist('qpcr', INITIAL)
+  const [s, set, reset] = usePersist('qpcr', INITIAL, CHOICES)
   const hrefFor = useToolLink()
-  const [picked, setPicked] = useState('')
+  const [picked, setPicked] = useState(null)
   const { v, hint, error } = check(s)
 
   const setNames = (key, countKey) => (text) => {
@@ -172,10 +178,11 @@ export default function QpcrPlate() {
               <li key={`${i}-${t.name}`}><span className="swatch" style={{ background: t.color }} aria-hidden="true" />{t.name}</li>
             ))}
           </ul>
-          {plan.plates.map((p, i) => <PlateMap key={i} plate={p} index={i} rows={plan.rows} cols={plan.cols} size={s.plate} onPick={setPicked} />)}
-          <p className="field-hint" role="status" aria-live="polite">
-            {picked || 'Numbers are samples, S1… standards, N no-template controls. Tap a well for details.'}
-          </p>
+          <p className="field-hint">Numbers are samples, S1… standards, N no-template controls. Tap a well for details; they appear under its plate.</p>
+          {plan.plates.map((p, i) => (
+            <PlateMap key={i} plate={p} index={i} rows={plan.rows} cols={plan.cols} size={s.plate}
+              message={picked?.plate === i ? picked.text : ''} onPick={setPicked} />
+          ))}
           <Toolbar>
             <a className="btn btn-primary" href={mixLink}>Open Master Mix for {plan.perTarget} Reactions</a>
           </Toolbar>
