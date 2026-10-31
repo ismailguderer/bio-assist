@@ -117,6 +117,11 @@ export default function MasterMix() {
     const key = `saved:${name}`
     set({ saved: { ...s.saved, [key]: { name, rxnVol: s.rxnVol, components: s.components } }, template: key, loadedTemplate: key, saveName: '' })
   }
+  // restores the template's recipe and the default run size
+  const resetAll = () => {
+    const key = templateFor(s, s.template) ? s.template : 'pcr'
+    set({ template: key, ...fromTemplate(templateFor(s, key)), loadedTemplate: key, n: INITIAL.n, extra: INITIAL.extra, saveName: '' })
+  }
   const removeSaved = () => {
     const { [s.template]: _, ...rest } = s.saved
     set({ saved: rest })
@@ -187,7 +192,7 @@ export default function MasterMix() {
         {ready && <CopyButton text={text} />}
         <ShareButton toolKey="mastermix" state={{ ...s, template: shareTemplate, loadedTemplate: shareTemplate }} />
         {s.saved[s.template] && <button type="button" className="btn" onClick={removeSaved}>Delete Template</button>}
-        <ClearButton onClick={() => loadTemplate(s.template)} label="Reset" />
+        <ClearButton onClick={resetAll} label="Reset" />
       </Toolbar>
     </div>
   )
